@@ -285,87 +285,134 @@
                                   </div>
                               </li>
                               
-                              <li class="nav-item nav-icon dropdown">
-    <a href="#" class="search-toggle dropdown-toggle" id="dropdownMenuButton"
-        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-            stroke-linejoin="round" class="feather feather-bell">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-        </svg>
-        <span class="bg-primary "></span>
-    </a>
-    <div class="iq-sub-dropdown dropdown-menu" aria-labelledby="dropdownMenuButton">
-        <div class="card shadow-none m-0">
-            <div class="card-body p-0">
-                <div class="cust-title p-3">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <h5 class="mb-0">Notifications</h5>
-                        <a class="badge badge-primary badge-card" href="#">
-                            <?= count($inventoryNotifications) + count($reportsNotifications) ?>
-                        </a>
-                    </div>
-                </div>
-                <div class="px-3 pt-0 pb-0 sub-card">
-
-                    <?php if (!empty($inventoryNotifications)): ?>
-                        <?php foreach ($inventoryNotifications as $notification): ?>
-                            <a href="#" class="iq-sub-card">
-                                <div class="media align-items-center cust-card py-3 border-bottom">
-                                    <div>
-                                        <img class="avatar-50 rounded-small"
-                                            src="<?= htmlspecialchars($notification['image_path']); ?>" 
-                                            alt="<?= htmlspecialchars($notification['product_name']); ?>">
-                                    </div>
-                                    <div class="media-body ml-3">
-                                        <div class="d-flex align-items-center justify-content-between">
-                                            <h6 class="mb-0"><?= htmlspecialchars($notification['product_name']); ?></h6>
-                                            <small class="text-dark">
-                                                <b>Available: <?= htmlspecialchars($notification['available_stock']); ?></b>
-                                            </small>
+                              <li class="nav-item nav-icon search-content">
+                                <a href="#" class="search-toggle rounded" id="dropdownSearch" data-toggle="dropdown"
+                                    aria-haspopup="true" aria-expanded="false">
+                                    <i class="ri-search-line"></i>
+                                </a>
+                                <div class="iq-search-bar iq-sub-dropdown dropdown-menu" aria-labelledby="dropdownSearch">
+                                    <form action="#" class="searchbox p-2">
+                                        <div class="form-group mb-0 position-relative">
+                                            <input type="text" class="text search-input font-size-12"
+                                                placeholder="type here to search...">
+                                            <a href="#" class="search-link"><i class="las la-search"></i></a>
                                         </div>
-                                        <small>Inventory: <?= htmlspecialchars($notification['inventory_qty']); ?>, 
-                                        Sales: <?= htmlspecialchars($notification['sales_qty']); ?></small>
-                                    </div>
+                                    </form>
                                 </div>
-                            </a>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <p class="text-center">No inventory notifications available.</p>
-                    <?php endif; ?>
-
-                    <?php if (!empty($reportsNotifications)): ?>
-                        <?php foreach ($reportsNotifications as $notification): ?>
-                            <a href="#" class="iq-sub-card">
-                                <div class="media align-items-center cust-card py-3 border-bottom">
-                                    <div>
-                                        <img class="avatar-50 rounded-small"
-                                            src="<?= htmlspecialchars($notification['image_path']); ?>" 
-                                            alt="<?= htmlspecialchars($notification['product_name']); ?>">
-                                    </div>
-                                    <div class="media-body ml-3">
-                                        <div class="d-flex align-items-center justify-content-between">
-                                            <h6 class="mb-0"><?= htmlspecialchars($notification['product_name']); ?></h6>
-                                            <small class="text-dark">
-                                                <b>Revenue: <?= htmlspecialchars($notification['revenue']); ?></b>
-                                            </small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </a>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <p class="text-center">No reports notifications available.</p>
-                    <?php endif; ?>
-                </div>
-                <a class="right-ic btn btn-primary btn-block position-relative p-2" href="page-list-inventory.php" role="button">
-                    View All
-                </a>
-            </div>
-        </div>
-    </div>
-</li>
+                            </li>
+                            <li class="nav-item nav-icon dropdown">
+                              <a href="#" class="search-toggle dropdown-toggle" id="dropdownMenuButton"
+                                  data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                      stroke-linejoin="round" class="feather feather-bell">
+                                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                      <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                  </svg>
+                                  <span class="bg-primary "></span>
+                              </a>
+                              <div class="iq-sub-dropdown dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                  <div class="card shadow-none m-0">
+                                      <div class="card-body p-0">
+                                          <div class="cust-title p-3">
+                                              <div class="d-flex align-items-center justify-content-between">
+                                                  <h5 class="mb-0">Notifications</h5>
+                                                  <a class="badge badge-primary badge-card" href="#">
+                                                      <span id="notification-count">0</span>
+                                                  </a>
+                                              </div>
+                                          </div>
+                                          <div class="px-3 pt-0 pb-0 sub-card">
+                                              <div id="inventory-notifications"></div>
+                                              <div id="report-notifications"></div>
+                                          </div>
+                                          <a class="right-ic btn btn-primary btn-block position-relative p-2" href="page-list-inventory.php" role="button">
+                                              View All
+                                          </a>
+                                      </div>
+                                  </div>
+                              </div>
+                          </li>
+                          
+                          <script>
+                              // Fetch notifications via AJAX
+                              async function fetchNotifications() {
+                                  try {
+                                      // Fetch inventory notifications
+                                      const inventoryResponse = await fetch('/notifications/inventory');
+                                      const inventoryNotifications = await inventoryResponse.json();
+                          
+                                      // Fetch report notifications
+                                      const reportsResponse = await fetch('/notifications/reports');
+                                      const reportsNotifications = await reportsResponse.json();
+                          
+                                      // Update notification count
+                                      const totalNotifications = inventoryNotifications.length + reportsNotifications.length;
+                                      document.getElementById('notification-count').textContent = totalNotifications;
+                          
+                                      // Display Inventory Notifications
+                                      const inventoryContainer = document.getElementById('inventory-notifications');
+                                      if (inventoryNotifications.length > 0) {
+                                          inventoryNotifications.forEach(notification => {
+                                              const notificationElement = document.createElement('a');
+                                              notificationElement.classList.add('iq-sub-card');
+                                              notificationElement.innerHTML = `
+                                                  <div class="media align-items-center cust-card py-3 border-bottom">
+                                                      <div>
+                                                          <img class="avatar-50 rounded-small" src="${notification.image_path}" alt="${notification.product_name}">
+                                                      </div>
+                                                      <div class="media-body ml-3">
+                                                          <div class="d-flex align-items-center justify-content-between">
+                                                              <h6 class="mb-0">${notification.product_name}</h6>
+                                                              <small class="text-dark">
+                                                                  <b>Available: ${notification.available_stock}</b>
+                                                              </small>
+                                                          </div>
+                                                          <small>Inventory: ${notification.inventory_qty}, Sales: ${notification.sales_qty}</small>
+                                                      </div>
+                                                  </div>
+                                              `;
+                                              inventoryContainer.appendChild(notificationElement);
+                                          });
+                                      } else {
+                                          inventoryContainer.innerHTML = '<p class="text-center">No inventory notifications available.</p>';
+                                      }
+                          
+                                      // Display Report Notifications
+                                      const reportContainer = document.getElementById('report-notifications');
+                                      if (reportsNotifications.length > 0) {
+                                          reportsNotifications.forEach(notification => {
+                                              const notificationElement = document.createElement('a');
+                                              notificationElement.classList.add('iq-sub-card');
+                                              notificationElement.innerHTML = `
+                                                  <div class="media align-items-center cust-card py-3 border-bottom">
+                                                      <div>
+                                                          <img class="avatar-50 rounded-small" src="${notification.image_path}" alt="${notification.product_name}">
+                                                      </div>
+                                                      <div class="media-body ml-3">
+                                                          <div class="d-flex align-items-center justify-content-between">
+                                                              <h6 class="mb-0">${notification.product_name}</h6>
+                                                              <small class="text-dark">
+                                                                  <b>Revenue: ${notification.revenue}</b>
+                                                              </small>
+                                                          </div>
+                                                      </div>
+                                                  </div>
+                                              `;
+                                              reportContainer.appendChild(notificationElement);
+                                          });
+                                      } else {
+                                          reportContainer.innerHTML = '<p class="text-center">No reports notifications available.</p>';
+                                      }
+                                  } catch (error) {
+                                      console.error('Error fetching notifications:', error);
+                                  }
+                              }
+                          
+                              // Call the function to load notifications when the page is ready
+                              fetchNotifications();
+                          </script>
+                          
 
                               <li class="nav-item nav-icon dropdown caption-content">
                                   <a href="#" class="search-toggle dropdown-toggle" id="dropdownMenuButton4"
@@ -427,60 +474,59 @@
         </div>
     </div>
 </div>
-      </div>      <div class="content-page">
-     <div class="container-fluid add-form-list">
-        <div class="row">
-            <div class="col-sm-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between">
-                        <div class="header-title">
-                            <h4 class="card-title">Add Expense</h4>
+        <div class="content-page">
+            <div class="container-fluid add-form-list">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between">
+                                <div class="header-title">
+                                    <h4 class="card-title">Add Expense</h4>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <form action="/handle-expense-actions" method="POST" data-toggle="validator">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="form-group">
+                                                <label for="expense_date">Expense Date *</label>
+                                                <input type="date" class="form-control" id="expense_date" name="expense_date" required />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <div class="form-group">
+                                                <label for="description">Description *</label>
+                                                <textarea class="form-control" id="description" name="description" rows="2" placeholder="Description" required></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <div class="form-group">
+                                                <label for="amount">Amount *</label>
+                                                <input type="number" class="form-control" id="amount" name="amount" placeholder="Amount" required />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <div class="form-group">
+                                                <label for="created_by">Created By *</label>
+                                                <input type="text" class="form-control" id="created_by" name="created_by" placeholder="Created By" required />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary mr-2">Add Expense</button>
+                                    <button type="reset" class="btn btn-danger">Reset</button>
+                                </form>
+                            </div>
                         </div>
-                    </div>
-                    <div class="card-body">
-                    <form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST" data-toggle="validator">
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div class="form-group">
-                                    <label for="expense_date">Expense Date *</label>
-                                    <input type="date" class="form-control" id="expense_date" name="expense_date" required />
-                                </div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="form-group">
-                                    <label for="description">Description *</label>
-                                    <textarea class="form-control" id="description" name="description" rows="2" placeholder="Description" required></textarea>
-                                </div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="form-group">
-                                    <label for="amount">Amount *</label>
-                                    <input type="number" class="form-control" id="amount" name="amount" placeholder="Amount" required />
-                                </div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="form-group">
-                                    <label for="created_by">Created By *</label>
-                                    <input type="text" class="form-control" id="created_by" name="created_by" placeholder="Created By" required />
-                                </div>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary mr-2">Add Expense</button>
-                        <button type="reset" class="btn btn-danger">Reset</button>
-                    </form>
-
-                        
                     </div>
                 </div>
+                <!-- Page end -->
             </div>
         </div>
-        <!-- Page end  -->
-    </div>
-      </div>
     </div>
     <!-- Wrapper End-->
+
     <footer class="iq-footer">
-            <div class="container-fluid">
+        <div class="container-fluid">
             <div class="card">
                 <div class="card-body">
                     <div class="row">
@@ -488,7 +534,7 @@
                             <ul class="list-inline mb-0">
                                 <li class="list-inline-item"><a href="https://salespilot.cybertrendhub.store/privacy-policy.php">Privacy Policy</a></li>
                                 <li class="list-inline-item"><a href="https://salespilot.cybertrendhub.store/terms-of-service.php">Terms of Use</a></li>
-                              <li class="list-inline-item"><a href="https://salespilot.cybertrendhub.store/subscription.php">Subscriptions</a></li>
+                                <li class="list-inline-item"><a href="https://salespilot.cybertrendhub.store/subscription.php">Subscriptions</a></li>
                                 <li class="list-inline-item"><a href="https://salespilot.cybertrendhub.store/pay.php">Pay Now</a></li>
                                 <li class="list-inline-item"><a href="https://salespilot.cybertrendhub.store/help.html">Help</a></li>
                             </ul>
@@ -501,6 +547,7 @@
             </div>
         </div>
     </footer>
+
     <!-- Backend Bundle JavaScript -->
     <script src="https://salespilot.cybertrendhub.store/assets/js/backend-bundle.min.js"></script>
     
@@ -509,13 +556,15 @@
     
     <!-- app JavaScript -->
     <script src="https://salespilot.cybertrendhub.store/assets/js/app.js"></script>
+
     <script>
-document.getElementById('createButton').addEventListener('click', function() {
-    // Optional: Validate input or perform any additional checks here
-    
-    // Redirect to invoice-form.php
-    window.location.href = 'invoice-form.php';
-});
-</script>
-  </body>
+        document.getElementById('createButton').addEventListener('click', function() {
+            // Optional: Validate input or perform any additional checks here
+            
+            // Redirect to invoice-form.php (if needed)
+            window.location.href = 'invoice-form.php';
+        });
+    </script>
+</body>
+
 </html>
