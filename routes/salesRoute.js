@@ -1,19 +1,12 @@
+// routes/salesRoute.js
 const express = require('express');
-const { Sales, Products, Staffs, Customers } = require('../models'); // Ensure this path is correct
+const pool = require('../models/db'); // Import the database connection
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 
 // Router initialization
 const router = express.Router();
-
-// MySQL connection setup
-const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-});
 
 // Middleware to validate session
 function validateSession(req, res, next) {
@@ -36,28 +29,31 @@ router.post('/', validateSession, async (req, res) => {
 
     try {
         // Fetch or create staff and customer
-        const staff = await Staffs.findOrCreate({ where: { staffName } });
-        const customer = await Customers.findOrCreate({ where: { customerName } });
+        let [staff] = await pool.execute('SELECT * FROM staffs WHERE staffName = ?', [staffName]);
+        if (!staff.length) {
+            return res.status(404).json({ error: 'Staff not found.' });
+        }
+        
+        let [customer] = await pool.execute('SELECT * FROM customers WHERE customerName = ?', [customerName]);
+        if (!customer.length) {
+            return res.status(404).json({ error: 'Customer not found.' });
+        }
 
         // Get product ID
-        const product = await Products.findOne({ where: { name } });
-        if (!product) {
+        let [product] = await pool.execute('SELECT * FROM products WHERE name = ?', [name]);
+        if (!product.length) {
             return res.status(404).json({ error: 'Product not found.' });
         }
 
         // Insert into sales table
-        const sale = await Sales.create({
-            productId: product.id,
-            name,
-            totalPrice,
-            salesPrice,
-            salesQty,
-            saleNote,
-            saleStatus,
-            paymentStatus,
-        });
+        const result = await pool.execute(
+            'INSERT INTO sales (productId, name, totalPrice, salesPrice, salesQty, saleNote, saleStatus, paymentStatus) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
+            [
+                product[0].id, name, totalPrice, salesPrice, salesQty, saleNote, saleStatus, paymentStatus
+            ]
+        );
 
-        res.status(201).json({ message: 'Sale recorded successfully.', sale });
+        res.status(201).json({ message: 'Sale recorded successfully.', sale: result });
     } catch (err) {
         res.status(500).json({ error: 'Failed to process sale.', details: err.message });
     }
@@ -69,19 +65,10 @@ router.get('/inventory-notifications', validateSession, async (req, res) => {
         const lowStockThreshold = 10;
         const highStockThreshold = 1000;
 
-        const inventoryNotifications = await Inventory.findAll({
-            include: [{
-                model: Products,
-                attributes: ['imagePath'],
-            }],
-            where: {
-                [Sequelize.Op.or]: [
-                    { availableStock: { [Sequelize.Op.lt]: lowStockThreshold } },
-                    { availableStock: { [Sequelize.Op.gt]: highStockThreshold } },
-                ],
-            },
-            order: [['lastUpdated', 'DESC']],
-        });
+        const [inventoryNotifications] = await pool.execute(
+            `SELECT * FROM inventory WHERE availableStock < ? OR availableStock > ? ORDER BY lastUpdated DESC`,
+            [lowStockThreshold, highStockThreshold]
+        );
 
         res.json(inventoryNotifications);
     } catch (err) {
@@ -94,8 +81,8 @@ router.post('/:id/pdf', validateSession, async (req, res) => {
     const saleId = req.params.id;
 
     try {
-        const sale = await Sales.findByPk(saleId);
-        if (!sale) {
+        const [sale] = await pool.execute('SELECT * FROM sales WHERE id = ?', [saleId]);
+        if (!sale.length) {
             return res.status(404).json({ error: 'Sale not found.' });
         }
 
@@ -106,10 +93,10 @@ router.post('/:id/pdf', validateSession, async (req, res) => {
 
         pdf.fontSize(16).text('Sales Record', { align: 'center' });
         pdf.moveDown();
-        pdf.fontSize(12).text(`Sale Date: ${sale.saleDate}`);
-        pdf.text(`Product Name: ${sale.name}`);
-        pdf.text(`Total Price: ${sale.totalPrice}`);
-        pdf.text(`Sales Price: ${sale.salesPrice}`);
+        pdf.fontSize(12).text(`Sale Date: ${sale[0].saleDate}`);
+        pdf.text(`Product Name: ${sale[0].name}`);
+        pdf.text(`Total Price: ${sale[0].totalPrice}`);
+        pdf.text(`Sales Price: ${sale[0].salesPrice}`);
         pdf.end();
 
         res.download(pdfPath, `sale_${saleId}.pdf`, () => {
