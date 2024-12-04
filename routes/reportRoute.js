@@ -2,7 +2,7 @@ const express = require('express');
 const session = require('express-session');
 const mysql = require('mysql2');
 const { Op } = require('sequelize');
-const { User, Product, Category, Sale, SalesAnalytics, Inventory, Report, sequelize } = require('../models');
+const { User, Product, Category, Sale, SalesAnalytics, Inventory, Report, sequelize } = require('/models');
 
 const router = express.Router();
 
