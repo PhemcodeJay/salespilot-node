@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { db } = require('./db'); // Assuming db is a configured database connection instance
+const { db } = require('./config'); // Assuming db is a configured database connection instance
 
 
 // MySQL connection setup
