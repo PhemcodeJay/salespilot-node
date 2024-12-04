@@ -1,18 +1,12 @@
-require('dotenv').config(); // Load environment variables from .env file
-
-const express = require('express');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const mysql = require('mysql2');
+const dotenv = require('dotenv');
 
-// Create Express app
-const app = express();
-
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Load environment variables
+dotenv.config();
 
 // MySQL connection setup
 const db = mysql.createConnection({
@@ -25,8 +19,8 @@ const db = mysql.createConnection({
 // Nodemailer setup
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT || 587, // Default to port 587
-    secure: false, // Set to true if using port 465
+    port: process.env.SMTP_PORT || 587,
+    secure: false,
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
@@ -44,8 +38,10 @@ const sendEmail = (to, subject, text, html) => {
     });
 };
 
-// User Registration Route
-app.post('/signup', async (req, res) => {
+// Controller functions
+
+// User Registration
+const signup = async (req, res) => {
     const { username, password, email, confirmpassword } = req.body;
 
     if (!username || !password || !email || !confirmpassword) {
@@ -65,7 +61,6 @@ app.post('/signup', async (req, res) => {
     }
 
     try {
-        // Check if the user exists
         const [existingUser] = await db.promise().execute(
             'SELECT id FROM users WHERE username = ? OR email = ?',
             [username, email]
@@ -75,26 +70,22 @@ app.post('/signup', async (req, res) => {
             return res.status(400).json({ error: 'Username or Email already exists!' });
         }
 
-        // Hash the password and generate activation code
         const hashedPassword = await bcrypt.hash(password, 10);
         const activationCode = crypto.randomBytes(16).toString('hex');
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 1 day from now
 
-        // Insert user into the database
         const [insertUserResult] = await db.promise().execute(
             'INSERT INTO users (username, password, email) VALUES (?, ?, ?)',
             [username, hashedPassword, email]
         );
         const userId = insertUserResult.insertId;
 
-        // Insert activation code into the database
         await db.promise().execute(
             'INSERT INTO activation_codes (user_id, activation_code, expires_at) VALUES (?, ?, ?)',
             [userId, activationCode, expiresAt]
         );
 
-        // Send activation email
-        const activationLink = `https://salespilot.cybertrendhub.store/activate.php?token=${activationCode}`;
+        const activationLink = `https://salespilot.cybertrendhub.store/activate?token=${activationCode}`;
         await sendEmail(email, 'Activate Your Account', `Click here to activate your account: ${activationLink}`, 
             `<a href="${activationLink}">Activate Account</a>`);
 
@@ -103,10 +94,10 @@ app.post('/signup', async (req, res) => {
         console.error(error);
         res.status(500).json({ error: 'Server error. Please try again later.' });
     }
-});
+};
 
-// Login Handler
-app.post('/login', async (req, res) => {
+// User Login
+const login = async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -114,7 +105,6 @@ app.post('/login', async (req, res) => {
     }
 
     try {
-        // Fetch user details from database
         const [users] = await db.promise().execute(
             'SELECT id, username, password FROM users WHERE username = ?',
             [username]
@@ -125,14 +115,11 @@ app.post('/login', async (req, res) => {
         }
 
         const user = users[0];
-
-        // Verify password
         const isValidPassword = await bcrypt.compare(password, user.password);
         if (!isValidPassword) {
             return res.status(400).json({ error: 'Invalid username or password!' });
         }
 
-        // Generate JWT token
         const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
         res.json({ message: 'Login successful!', token });
@@ -140,19 +127,21 @@ app.post('/login', async (req, res) => {
         console.error(error);
         res.status(500).json({ error: 'Server error. Please try again later.' });
     }
-});
+};
 
 // Password Reset Request
-app.post('/password-reset', (req, res) => {
+const passwordReset = async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
         return res.status(400).send('Email is required');
     }
 
-    const query = 'SELECT id FROM users WHERE email = ?';
-    db.execute(query, [email], (err, results) => {
-        if (err || results.length === 0) {
+    try {
+        const query = 'SELECT id FROM users WHERE email = ?';
+        const [results] = await db.promise().execute(query, [email]);
+
+        if (results.length === 0) {
             return res.status(404).send('Email not found');
         }
 
@@ -162,35 +151,32 @@ app.post('/password-reset', (req, res) => {
         expiresAt.setHours(expiresAt.getHours() + 1);
 
         const resetQuery = 'INSERT INTO password_resets (user_id, reset_code, expires_at) VALUES (?, ?, ?)';
-        db.execute(resetQuery, [userId, resetToken, expiresAt], (err) => {
-            if (err) {
-                return res.status(500).send('Error creating password reset token');
-            }
+        await db.promise().execute(resetQuery, [userId, resetToken, expiresAt]);
 
-            const resetUrl = `https://yourdomain.com/reset-password?token=${resetToken}`;
-            sendEmail(email, 'Password Reset Request', `Click here to reset your password: ${resetUrl}`, 
-                `<a href="${resetUrl}">Reset Password</a>`)
-                .then(() => {
-                    res.send('Password reset email sent');
-                })
-                .catch(err => {
-                    res.status(500).send(`Error sending email: ${err.message}`);
-                });
-        });
-    });
-});
+        const resetUrl = `https://yourdomain.com/reset-password?token=${resetToken}`;
+        await sendEmail(email, 'Password Reset Request', `Click here to reset your password: ${resetUrl}`, 
+            `<a href="${resetUrl}">Reset Password</a>`);
 
-// Reset Password Handler
-app.post('/reset-password', (req, res) => {
+        res.send('Password reset email sent');
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error creating password reset token');
+    }
+};
+
+// Reset Password
+const resetPassword = async (req, res) => {
     const { password, confirmPassword, token } = req.body;
 
     if (!password || !confirmPassword || password !== confirmPassword || password.length < 5 || password.length > 20) {
         return res.status(400).send('Invalid input');
     }
 
-    const query = 'SELECT user_id, expires_at FROM password_resets WHERE reset_code = ?';
-    db.execute(query, [token], (err, results) => {
-        if (err || results.length === 0) {
+    try {
+        const query = 'SELECT user_id, expires_at FROM password_resets WHERE reset_code = ?';
+        const [results] = await db.promise().execute(query, [token]);
+
+        if (results.length === 0) {
             return res.status(400).send('Invalid or expired reset token');
         }
 
@@ -202,25 +188,16 @@ app.post('/reset-password', (req, res) => {
         const hashedPassword = bcrypt.hashSync(password, 10);
 
         const updatePasswordQuery = 'UPDATE users SET password = ? WHERE id = ?';
-        db.execute(updatePasswordQuery, [hashedPassword, resetData.user_id], (err) => {
-            if (err) {
-                return res.status(500).send('Error updating password');
-            }
+        await db.promise().execute(updatePasswordQuery, [hashedPassword, resetData.user_id]);
 
-            const deleteTokenQuery = 'DELETE FROM password_resets WHERE reset_code = ?';
-            db.execute(deleteTokenQuery, [token], (err) => {
-                if (err) {
-                    return res.status(500).send('Error removing reset token');
-                }
+        const deleteTokenQuery = 'DELETE FROM password_resets WHERE reset_code = ?';
+        await db.promise().execute(deleteTokenQuery, [token]);
 
-                res.send('Password reset successful');
-            });
-        });
-    });
-});
+        res.send('Password reset successful');
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error resetting password');
+    }
+};
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+module.exports = { signup, login, passwordReset, resetPassword };
