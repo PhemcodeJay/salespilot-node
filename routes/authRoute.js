@@ -30,6 +30,7 @@ const transporter = nodemailer.createTransport({
     },
 });
 
+
 // Utility function to send emails
 const sendEmail = (to, subject, text, html) => {
     return transporter.sendMail({
