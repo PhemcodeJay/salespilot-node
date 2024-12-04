@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SalesPilot - Pricing Plans</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="https://salespilot.cybertrendhub.store/assets/images/favicon-blue.ico" />
+    <style>
+        /* Your CSS styles here */
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <img src="https://salespilot.cybertrendhub.store/logonew1.jpg" alt="Logo">
+        <h1>Sales Pilot - Price and Plans</h1>
+        <p>Select a plan that suits your needs and get started today!</p>
+    </div>
+
+    <div class="trial-container">
+        <h2>Start Your Free 3-Month Trial!</h2>
+        <button class="trial-button" onclick="activateTrial()">Activate Free Trial</button>
+        <div id="responseMessage" class="response-message"></div>
+        <a class="trial-button" href="dashboard.php">Back to Dashboard</a>
+    </div>
+
+    <div class="row">
+        <?php foreach ($pricingPlans as $planKey => $plan): ?>
+            <div class="col-md-4 mb-4">
+                <div class="pricing-plan text-center">
+                    <h3><?= $plan['name'] ?></h3>
+                    <p class="price">USD: $<?= number_format($plan['amount_USD'], 2) ?></p>
+                    <p><strong>KES:</strong> <?= number_format($plan['amount_KES'], 2) ?></p>
+                    <p><strong>NGN:</strong> <?= number_format($plan['amount_NGN'], 2) ?></p>
+
+                    <p><?= $plan['details']['description'] ?></p>
+                    <ul>
+                        <?php foreach ($plan['details']['features'] as $feature): ?>
+                            <li><?= $feature ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+
+                    <div id="paypal-button-container-<?= $planKey ?>"></div>
+
+                    <button class="btn btn-warning" data-toggle="modal" data-target="#binanceModal" 
+                            data-currency="USD" data-amount="<?= $plan['amount_USD'] ?>" 
+                            data-payment="Binance Pay" data-info="Pay with Binance">
+                        Binance Pay (USDT)
+                    </button>
+                    <button class="btn btn-success" data-toggle="modal" data-target="#mpesaModal" 
+                            data-currency="KES" data-amount="<?= $plan['amount_KES'] ?>" 
+                            data-payment="M-Pesa" data-info="Pay via M-Pesa">
+                        M-Pesa (KES)
+                    </button>
+                    <button class="btn btn-info" data-toggle="modal" data-target="#ngnModal" 
+                            data-currency="NGN" data-amount="<?= $plan['amount_NGN'] ?>" 
+                            data-payment="Bank Transfer (NGN)" data-info="Bank Transfer (NGN)">
+                        Bank Transfer (NGN)
+                    </button>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+
+<!-- Include the external JS file -->
+<script src="payRoute.js"></script>
+
+</body>
+</html>

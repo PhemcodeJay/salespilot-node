@@ -75,6 +75,13 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
 
+// Sample pricing plans
+const pricingPlans = [
+    { planKey: 'basic', planName: 'Basic Plan', price: '5.00', paypalPlanId: 'P-7E210255TM029860GM5HYC4A' },
+    { planKey: 'premium', planName: 'Premium Plan', price: '15.00', paypalPlanId: 'P-7E210255TM029860GM5HYC4B' },
+    { planKey: 'enterprise', planName: 'Enterprise Plan', price: '25.00', paypalPlanId: 'P-7E210255TM029860GM5HYC4C' }
+  ];
+
 // Start the Server
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
