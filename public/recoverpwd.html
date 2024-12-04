@@ -33,12 +33,16 @@
                                             <h2 class="mb-2">Recover Password</h2>
                                             <p>Enter your email address and we'll send you an email with instructions to reset your password.</p>
 
-                                            <form method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>">
+                                            <!-- Display error or success message -->
+                                            <div id="error-message" class="alert alert-danger" style="display: none;"></div>
+                                            <div id="success-message" class="alert alert-success" style="display: none;"></div>
+
+                                            <form id="reset-password-form" method="post" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>">
                                                 <div class="row">
                                                     <div class="col-lg-12">
                                                         <div class="floating-label form-group">
                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-                                                            <input class="floating-input form-control" type="email" name="Email" placeholder="Enter Your Email Address" required>
+                                                            <input class="floating-input form-control" type="email" name="Email" id="email" placeholder="Enter Your Email Address" required>
                                                             <label for="email">Email</label>
                                                         </div>
                                                     </div>
@@ -66,11 +70,31 @@
 
     <script>
         document.getElementById('resetButton').addEventListener('click', function(event) {
+            const email = document.getElementById('email').value;
+            const errorMessage = document.getElementById('error-message');
+            const successMessage = document.getElementById('success-message');
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                errorMessage.textContent = 'Please enter a valid email address.';
+                errorMessage.style.display = 'block';
+                event.preventDefault();
+                return;
+            }
+
             const confirmReset = confirm('Are you sure you want to request a password reset?');
 
             if (!confirmReset) {
                 event.preventDefault();
+                return;
             }
+
+            // Assuming successful form submission, you can display a success message
+            successMessage.textContent = 'If your email is registered, you will receive an email with instructions to reset your password.';
+            successMessage.style.display = 'block';
         });
     </script>
 </body>

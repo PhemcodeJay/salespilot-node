@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const mysql = require('mysql2');
 const dotenv = require('dotenv');
+const express = require('express');
+const router = express.Router();
 
 // Load environment variables
 dotenv.config();
@@ -37,8 +39,6 @@ const sendEmail = (to, subject, text, html) => {
         html,
     });
 };
-
-// Controller functions
 
 // User Registration
 const signup = async (req, res) => {
@@ -86,7 +86,7 @@ const signup = async (req, res) => {
         );
 
         const activationLink = `https://salespilot.cybertrendhub.store/activate?token=${activationCode}`;
-        await sendEmail(email, 'Activate Your Account', `Click here to activate your account: ${activationLink}`, 
+        await sendEmail(email, 'Activate Your Account', `Click here to activate your account: ${activationLink}`,
             `<a href="${activationLink}">Activate Account</a>`);
 
         res.json({ message: 'Registration successful! Please check your email to activate your account.' });
@@ -95,49 +95,6 @@ const signup = async (req, res) => {
         res.status(500).json({ error: 'Server error. Please try again later.' });
     }
 };
-
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const db = require('../models'); // Assuming you're using Sequelize or similar ORM
-
-const signup = async (req, res) => {
-  const { username, password, email } = req.body;
-
-  if (!username || !password || !email) {
-    return res.status(400).json({ error: 'Username, password, and email are required.' });
-  }
-
-  try {
-    // Check if username or email already exists
-    const existingUser = await db.User.findOne({
-      where: { [db.Sequelize.Op.or]: [{ username }, { email }] }
-    });
-
-    if (existingUser) {
-      return res.status(400).json({ error: 'Username or email already taken.' });
-    }
-
-    // Hash password before saving
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newUser = await db.User.create({
-      username,
-      password: hashedPassword,
-      email
-    });
-
-    // Optionally, generate a JWT token
-    const token = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-    return res.status(201).json({ message: 'User created successfully', token });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'An error occurred. Please try again.' });
-  }
-};
-
-module.exports = { signup };
-
 
 // User Login
 const login = async (req, res) => {
@@ -196,8 +153,8 @@ const passwordReset = async (req, res) => {
         const resetQuery = 'INSERT INTO password_resets (user_id, reset_code, expires_at) VALUES (?, ?, ?)';
         await db.promise().execute(resetQuery, [userId, resetToken, expiresAt]);
 
-        const resetUrl = `https://yourdomain.com/reset-password?token=${resetToken}`;
-        await sendEmail(email, 'Password Reset Request', `Click here to reset your password: ${resetUrl}`, 
+        const resetUrl = `https://salespilot.cybertrendhub.store/reset-password?token=${resetToken}`;
+        await sendEmail(email, 'Password Reset Request', `Click here to reset your password: ${resetUrl}`,
             `<a href="${resetUrl}">Reset Password</a>`);
 
         res.send('Password reset email sent');
@@ -243,4 +200,57 @@ const resetPassword = async (req, res) => {
     }
 };
 
-module.exports = { signup, login, passwordReset, resetPassword };
+// Account activation controller
+const activateAccount = async (req, res) => {
+    const { token } = req.query;
+
+    if (!token) {
+        return res.status(400).json({ error: 'Activation token is required!' });
+    }
+
+    try {
+        const [results] = await db.promise().execute(
+            'SELECT user_id FROM activation_codes WHERE activation_code = ?',
+            [token]
+        );
+
+        if (results.length === 0) {
+            return res.status(400).json({ error: 'Invalid activation token!' });
+        }
+
+        const userId = results[0].user_id;
+
+        await db.promise().execute(
+            'UPDATE users SET activation_code = ? WHERE id = ?',
+            ['activated', userId]
+        );
+
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + 3);
+
+        await db.promise().execute(
+            'INSERT INTO subscriptions (user_id, subscription_plan, start_date, end_date, status, is_free_trial_used) VALUES (?, ?, ?, ?, ?, ?)',
+            [userId, 'starter', startDate, endDate, 'active', 1]
+        );
+
+        await db.promise().execute(
+            'DELETE FROM activation_codes WHERE activation_code = ?',
+            [token]
+        );
+
+        res.json({ message: 'Account activated successfully! You can now log in.' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error, please try again later.' });
+    }
+};
+
+// Routes
+router.post('/signup', signup);
+router.post('/login', login);
+router.post('/password-reset', passwordReset);
+router.post('/reset-password', resetPassword);
+router.get('/activate', activateAccount);
+
+module.exports = router;
