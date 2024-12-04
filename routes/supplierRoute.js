@@ -1,6 +1,6 @@
 const express = require('express');
 const mysql = require('mysql2');
-const FPDF = require('fpdf'); // PDF generation
+const pdfkit = require('pdfkit'); // PDF generation
 
 const router = express.Router();
 
@@ -85,7 +85,7 @@ router.get('/supplier/pdf/:supplier_id', checkLogin, (req, res) => {
         }
 
         const supplierData = supplier[0];
-        const pdf = new FPDF();
+        const pdf = new pdfkit();
         pdf.addPage();
         pdf.setFont('Arial', 'B', 16);
         pdf.cell(40, 10, 'Supplier Details');
