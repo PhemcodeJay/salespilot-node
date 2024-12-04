@@ -1,7 +1,3 @@
-# salespilot-node
-Here is the rewritten version of your README for a Node.js project based on your description:
-
----
 
 # SalesPilot – Sales Analytics and Inventory Management
 
