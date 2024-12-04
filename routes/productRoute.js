@@ -2,17 +2,6 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { db } = require('./config'); // Assuming db is a configured database connection instance
-
-
-// MySQL connection setup
-const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-});
-
 
 // Middleware for file uploads
 const upload = multer({
