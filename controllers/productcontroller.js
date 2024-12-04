@@ -201,23 +201,7 @@ router.post('/product', upload.single('pic'), async (req, res) => {
     }
 });
 
-// Inventory Notifications
-router.get('/inventory/notifications', async (req, res) => {
-    try {
-        const inventoryNotifications = await db.query(`
-            SELECT i.product_name, i.available_stock, i.inventory_qty, i.sales_qty, p.image_path
-            FROM inventory i
-            JOIN products p ON i.product_id = p.id
-            WHERE i.available_stock < ? OR i.available_stock > ?
-            ORDER BY i.last_updated DESC
-        `, [10, 1000]);
 
-        res.json({ success: true, inventoryNotifications });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: "Server error." });
-    }
-});
 
 // Export the router
 module.exports = router;

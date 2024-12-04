@@ -5,9 +5,9 @@ const PDFDocument = require('pdfkit');
 // Create a MySQL connection pool
 const pool = mysql.createPool({
     host: 'localhost',
-    user: 'your-db-username', // Replace with actual DB username
-    password: 'your-db-password', // Replace with actual DB password
-    database: 'salespilot',
+    user: 'root', // Replace with actual DB username
+    password: '', // Replace with actual DB password
+    database: 'dbs13455438',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -20,6 +20,7 @@ const db = mysql.createConnection({
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
 });
+
 
 exports.supplierController = async (req, res) => {
     try {

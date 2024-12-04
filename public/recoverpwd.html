@@ -43,12 +43,12 @@
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <button type="submit" class="btn btn-primary" name="request_reset">Reset</button>
+                                                <button id="resetButton" type="submit" class="btn btn-primary" name="request_reset">Reset</button>
                                             </form>
                                         </div>
                                     </div>
                                     <div class="col-lg-5 content-right">
-                                        <img src="https://salespilot.cybertrendhub.store/assets/images/login/01.png" class="img-fluid image-right" alt="">
+                                        <img src="https://salespilot.cybertrendhub.store/assets/images/login/01.png" class="img-fluid image-right" alt="Password Recovery Image">
                                     </div>
                                 </div>
                             </div>
@@ -59,10 +59,19 @@
         </section>
     </div>
 
-
     <!-- Backend Bundle JavaScript -->
     <script src="https://salespilot.cybertrendhub.store/assets/js/backend-bundle.min.js"></script>
     <script src="https://salespilot.cybertrendhub.store/assets/js/table-treeview.js"></script>
     <script src="https://salespilot.cybertrendhub.store/assets/js/app.js"></script>
+
+    <script>
+        document.getElementById('resetButton').addEventListener('click', function(event) {
+            const confirmReset = confirm('Are you sure you want to request a password reset?');
+
+            if (!confirmReset) {
+                event.preventDefault();
+            }
+        });
+    </script>
 </body>
 </html>

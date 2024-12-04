@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Account Activation</title>
+
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="https://salespilot.cybertrendhub.store/assets/css/backend-plugin.min.css">
     <link rel="stylesheet" href="https://salespilot.cybertrendhub.store/assets/css/backend.css?v=1.0.0">
     <link rel="stylesheet" href="https://salespilot.cybertrendhub.store/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css">
@@ -24,7 +26,7 @@
                                             <h2 class="mb-2" style="font-weight: bold; text-decoration: underline;">Account Activated</h2>
                                             <p style="font-weight: bold; text-decoration: underline;">Your account has been successfully activated.</p>
                                             <p>Click the button below to log in and start using your account.</p>
-                                            <a href="/login" class="btn btn-primary mt-3" style="font-weight: bold; text-decoration: underline;">Go to Login</a>
+                                            <a id="loginButton" href="/login" class="btn btn-primary mt-3" style="font-weight: bold; text-decoration: underline;">Go to Login</a>
                                         </div>
                                     </div>
                                     <div class="col-lg-5 content-right">
@@ -39,8 +41,21 @@
         </section>
     </div>
 
+    <!-- JavaScript -->
     <script src="https://salespilot.cybertrendhub.store/assets/js/backend-bundle.min.js"></script>
     <script src="https://salespilot.cybertrendhub.store/assets/js/table-treeview.js"></script>
     <script src="https://salespilot.cybertrendhub.store/assets/js/app.js"></script>
+
+    <script>
+        document.getElementById('loginButton').addEventListener('click', function(event) {
+            event.preventDefault();
+
+            const confirmNavigation = confirm('Are you ready to log in and explore your account?');
+
+            if (confirmNavigation) {
+                window.location.href = '/login';
+            }
+        });
+    </script>
 </body>
 </html>

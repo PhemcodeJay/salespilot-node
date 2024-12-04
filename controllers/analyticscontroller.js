@@ -12,6 +12,17 @@ const db = mysql.createConnection({
   database: process.env.DB_NAME,
 });
 
+// Create a MySQL connection pool
+const pool = mysql.createPool({
+  host: 'localhost',
+  user: 'root', // Replace with actual DB username
+  password: 'your-db-password', // Replace with actual DB password
+  database: 'salespilot',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
+
 // Middleware to check if user is logged in
 function checkUserLoggedIn(req, res, next) {
   if (!req.session.username) {
