@@ -96,6 +96,49 @@ const signup = async (req, res) => {
     }
 };
 
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const db = require('../models'); // Assuming you're using Sequelize or similar ORM
+
+const signup = async (req, res) => {
+  const { username, password, email } = req.body;
+
+  if (!username || !password || !email) {
+    return res.status(400).json({ error: 'Username, password, and email are required.' });
+  }
+
+  try {
+    // Check if username or email already exists
+    const existingUser = await db.User.findOne({
+      where: { [db.Sequelize.Op.or]: [{ username }, { email }] }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'Username or email already taken.' });
+    }
+
+    // Hash password before saving
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await db.User.create({
+      username,
+      password: hashedPassword,
+      email
+    });
+
+    // Optionally, generate a JWT token
+    const token = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    return res.status(201).json({ message: 'User created successfully', token });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'An error occurred. Please try again.' });
+  }
+};
+
+module.exports = { signup };
+
+
 // User Login
 const login = async (req, res) => {
     const { username, password } = req.body;
