@@ -2,17 +2,17 @@ const express = require('express');
 const session = require('express-session');
 const mysql = require('mysql2');
 const { Op } = require('sequelize');
-const moment = require('moment'); // For date manipulation
-
-// Create a MySQL connection pool
-const pool = mysql.createPool({
-    host: 'localhost',
-    user: 'your_user',
-    password: 'your_password',
-    database: 'your_database'
-});
+const { User, Product, Category, Sale, SalesAnalytics, Inventory, Report, sequelize } = require('../models');
 
 const router = express.Router();
+
+// MySQL connection setup using mysql2
+const db = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '', // Replace with your actual password
+    database: 'salespilot'
+});
 
 // Session configuration
 router.use(session({
@@ -20,7 +20,7 @@ router.use(session({
     resave: false,
     saveUninitialized: true,
     cookie: {
-        secure: true, // Set to true in production
+        secure: false, // Set to true in production
         httpOnly: true,
         maxAge: 86400000 // 1 day in milliseconds
     }
@@ -38,19 +38,14 @@ router.use(checkSession);
 
 // Fetch user details from the database
 async function getUserInfo(username) {
-    const query = 'SELECT * FROM users WHERE username = ?';
-    return new Promise((resolve, reject) => {
-        pool.query(query, [username], (err, results) => {
-            if (err) reject(new Error("Error: User not found."));
-            if (results.length === 0) reject(new Error("Error: User not found."));
-            resolve(results[0]);
-        });
-    });
+    const [rows] = await db.promise().query('SELECT * FROM users WHERE username = ?', [username]);
+    if (rows.length === 0) throw new Error("Error: User not found.");
+    return rows[0];
 }
 
 // Calculate product category metrics
 async function calculateProductCategoryMetrics() {
-    const query = `
+    const [salesCategoryData] = await db.promise().query(`
         SELECT
             categories.category_name AS category_name,
             COUNT(products.id) AS num_products,
@@ -63,13 +58,8 @@ async function calculateProductCategoryMetrics() {
         INNER JOIN categories ON products.category_id = categories.category_id
         LEFT JOIN sales ON sales.product_id = products.id
         GROUP BY categories.category_name
-    `;
-    return new Promise((resolve, reject) => {
-        pool.query(query, (err, results) => {
-            if (err) reject(err);
-            resolve(results);
-        });
-    });
+    `);
+    return salesCategoryData;
 }
 
 // Get revenue by category and calculate financial metrics
@@ -104,14 +94,10 @@ async function generateReportMetrics(salesCategoryData) {
 
 // Fetch previous year's revenue for year-over-year growth
 async function getPreviousYearRevenue(date) {
-    const previousYearDate = moment(date).subtract(1, 'year').format('YYYY-MM-DD');
-    const query = 'SELECT revenue FROM sales_analytics WHERE date LIKE ?';
-    return new Promise((resolve, reject) => {
-        pool.query(query, [`${previousYearDate}%`], (err, results) => {
-            if (err) reject(err);
-            resolve(results.length > 0 ? results[0].revenue : 0);
-        });
-    });
+    const previousYearDate = new Date(new Date(date).setFullYear(new Date(date).getFullYear() - 1));
+    const year = previousYearDate.getFullYear();
+    const [salesData] = await db.promise().query('SELECT * FROM sales_analytics WHERE date LIKE ?', [`${year}%`]);
+    return salesData.length > 0 ? salesData[0].revenue : 0;
 }
 
 // Calculate Year-Over-Year Growth
@@ -121,57 +107,68 @@ function calculateYearOverYearGrowth(totalSales, previousYearRevenue) {
 
 // Check if a report already exists for the current date
 async function checkIfReportExists(date) {
-    const query = 'SELECT * FROM sales_analytics WHERE date = ?';
-    return new Promise((resolve, reject) => {
-        pool.query(query, [date], (err, results) => {
-            if (err) reject(err);
-            resolve(results.length > 0 ? results[0] : null);
-        });
-    });
+    const [existingReport] = await db.promise().query('SELECT * FROM sales_analytics WHERE date = ?', [date]);
+    return existingReport.length > 0 ? existingReport[0] : null;
 }
 
 // Insert or update the report in the database
 async function saveReport(date, reportData, existingReport = null) {
     if (existingReport) {
-        const query = 'UPDATE sales_analytics SET ? WHERE id = ?';
-        return new Promise((resolve, reject) => {
-            pool.query(query, [reportData, existingReport.id], (err, results) => {
-                if (err) reject(err);
-                resolve(results);
-            });
-        });
+        await db.promise().query(
+            'UPDATE sales_analytics SET revenue = ?, profit_margin = ?, revenue_by_category = ?, year_over_year_growth = ?, inventory_turnover_rate = ?, stock_to_sales_ratio = ?, sell_through_rate = ?, gross_margin = ?, net_margin = ?, total_sales = ?, total_quantity = ?, total_profit = ? WHERE id = ?',
+            [
+                reportData.revenue,
+                reportData.profit_margin,
+                reportData.revenue_by_category,
+                reportData.year_over_year_growth,
+                reportData.inventory_turnover_rate,
+                reportData.stock_to_sales_ratio,
+                reportData.sell_through_rate,
+                reportData.gross_margin,
+                reportData.net_margin,
+                reportData.total_sales,
+                reportData.total_quantity,
+                reportData.total_profit,
+                existingReport.id
+            ]
+        );
     } else {
-        const query = 'INSERT INTO sales_analytics SET ?';
-        return new Promise((resolve, reject) => {
-            pool.query(query, [reportData], (err, results) => {
-                if (err) reject(err);
-                resolve(results);
-            });
-        });
+        await db.promise().query(
+            'INSERT INTO sales_analytics (date, revenue, profit_margin, revenue_by_category, year_over_year_growth, inventory_turnover_rate, stock_to_sales_ratio, sell_through_rate, gross_margin, net_margin, total_sales, total_quantity, total_profit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                date,
+                reportData.revenue,
+                reportData.profit_margin,
+                reportData.revenue_by_category,
+                reportData.year_over_year_growth,
+                reportData.inventory_turnover_rate,
+                reportData.stock_to_sales_ratio,
+                reportData.sell_through_rate,
+                reportData.gross_margin,
+                reportData.net_margin,
+                reportData.total_sales,
+                reportData.total_quantity,
+                reportData.total_profit
+            ]
+        );
     }
 }
 
 // Fetch inventory and report notifications
 async function getNotifications() {
-    const inventoryQuery = `
+    const [inventoryNotifications] = await db.promise().query(`
         SELECT * FROM inventory
         WHERE available_stock < 10 OR available_stock > 1000
         ORDER BY last_updated DESC
-    `;
-    const reportQuery = `
+    `);
+
+    const [reportNotifications] = await db.promise().query(`
         SELECT * FROM reports
         WHERE revenue > 10000 OR revenue < 1000
         ORDER BY report_date DESC
-    `;
-    return new Promise((resolve, reject) => {
-        pool.query(inventoryQuery, (err, inventoryNotifications) => {
-            if (err) reject(err);
-            pool.query(reportQuery, (err, reportNotifications) => {
-                if (err) reject(err);
-                resolve({ inventoryNotifications, reportNotifications });
-            });
-        });
-    });
+    `);
+
+    return { inventoryNotifications, reportNotifications };
 }
 
 // Main function to generate the report

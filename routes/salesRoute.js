@@ -1,68 +1,13 @@
 const express = require('express');
-const session = require('express-session');
-const { Sequelize, DataTypes } = require('sequelize');
+const { Sales, Products, Staffs, Customers } = require('../models'); // Ensure this path is correct
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 
-// Initialize Express and database connection
-const app = express();
-const sequelize = new Sequelize('salespilot', 'root', '', {
-    host: 'localhost',
-    dialect: 'mysql',
-});
+// Router initialization
+const router = express.Router();
 
-// Models
-const Users = sequelize.define('Users', {
-    username: { type: DataTypes.STRING, allowNull: false },
-    email: { type: DataTypes.STRING },
-    date: { type: DataTypes.DATE },
-});
-const Sales = sequelize.define('Sales', {
-    productId: { type: DataTypes.INTEGER },
-    name: { type: DataTypes.STRING },
-    totalPrice: { type: DataTypes.FLOAT },
-    salesPrice: { type: DataTypes.FLOAT },
-    salesQty: { type: DataTypes.INTEGER },
-    saleStatus: { type: DataTypes.STRING },
-    paymentStatus: { type: DataTypes.STRING },
-    saleDate: { type: DataTypes.DATE, defaultValue: Sequelize.NOW }, // Add saleDate field
-});
-const Products = sequelize.define('Products', {
-    name: { type: DataTypes.STRING },
-    imagePath: { type: DataTypes.STRING },
-});
-const Inventory = sequelize.define('Inventory', {
-    productId: { type: DataTypes.INTEGER },
-    productName: { type: DataTypes.STRING },
-    availableStock: { type: DataTypes.INTEGER },
-    inventoryQty: { type: DataTypes.INTEGER },
-    salesQty: { type: DataTypes.INTEGER },
-});
-
-// Define Staff and Customers models (assuming the missing models)
-const Staffs = sequelize.define('Staffs', {
-    staffName: { type: DataTypes.STRING },
-});
-const Customers = sequelize.define('Customers', {
-    customerName: { type: DataTypes.STRING },
-});
-
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(session({
-    secret: 'your-secret-key',
-    resave: false,
-    saveUninitialized: true,
-    cookie: {
-        maxAge: 86400 * 1000,
-        secure: true,
-        httpOnly: true,
-    },
-}));
-
-// Session Validation Middleware
+// Middleware to validate session
 function validateSession(req, res, next) {
     if (!req.session.username) {
         return res.status(401).json({ error: 'User not logged in.' });
@@ -70,24 +15,8 @@ function validateSession(req, res, next) {
     next();
 }
 
-// Routes
-app.get('/user', validateSession, async (req, res) => {
-    try {
-        const user = await Users.findOne({ where: { username: req.session.username } });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found.' });
-        }
-        res.json({
-            username: user.username,
-            email: user.email,
-            date: user.date,
-        });
-    } catch (err) {
-        res.status(500).json({ error: 'Database error.', details: err.message });
-    }
-});
-
-app.post('/sales', validateSession, async (req, res) => {
+// POST: Record a sale
+router.post('/', validateSession, async (req, res) => {
     const {
         name, saleStatus, salesPrice, totalPrice, salesQty,
         paymentStatus, saleNote, staffName, customerName,
@@ -126,7 +55,8 @@ app.post('/sales', validateSession, async (req, res) => {
     }
 });
 
-app.get('/inventory-notifications', validateSession, async (req, res) => {
+// GET: Inventory notifications (low/high stock alerts)
+router.get('/inventory-notifications', validateSession, async (req, res) => {
     try {
         const lowStockThreshold = 10;
         const highStockThreshold = 1000;
@@ -151,7 +81,8 @@ app.get('/inventory-notifications', validateSession, async (req, res) => {
     }
 });
 
-app.post('/sales/:id/pdf', validateSession, async (req, res) => {
+// POST: Generate PDF for a sale
+router.post('/:id/pdf', validateSession, async (req, res) => {
     const saleId = req.params.id;
 
     try {
@@ -162,7 +93,7 @@ app.post('/sales/:id/pdf', validateSession, async (req, res) => {
 
         // Generate PDF
         const pdf = new PDFDocument();
-        const pdfPath = path.join(__dirname, `sale_${saleId}.pdf`);
+        const pdfPath = path.join(__dirname, `../pdfs/sale_${saleId}.pdf`);
         pdf.pipe(fs.createWriteStream(pdfPath));
 
         pdf.fontSize(16).text('Sales Record', { align: 'center' });
@@ -181,7 +112,4 @@ app.post('/sales/:id/pdf', validateSession, async (req, res) => {
     }
 });
 
-// Start Server
-app.listen(3000, () => {
-    console.log('Server is running on http://localhost:3000');
-});
+module.exports = router;

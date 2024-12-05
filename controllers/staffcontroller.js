@@ -10,7 +10,7 @@ app.use(session({
     secret: 'your_secret_key',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: true }
+    cookie: { secure: false }  // Set to false for development (ensure HTTPS for production)
 }));
 
 // Configure body parser middleware to parse POST data
