@@ -13,8 +13,8 @@ const connection = mysql.createConnection({
 });
 
 // Middleware to parse request bodies
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 // Session setup
 app.use(session({
@@ -108,7 +108,7 @@ app.post('/invoices', (req, res) => {
                     // Insert each item linked to the invoice
                     const itemQuery = `
                         INSERT INTO invoice_items (invoice_id, item_name, qty, price, total)
-                        VALUES (?, ?, ?, ?, ?)`;
+                        VALUES ?`;  // Note: Using VALUES ? for multiple records
                     const items = item_name.map((item, index) => {
                         const qty = quantity[index];
                         const pricePerItem = price[index];
@@ -116,6 +116,7 @@ app.post('/invoices', (req, res) => {
                         return [invoiceId, item, qty, pricePerItem, total];
                     });
 
+                    // Execute the batch insert
                     connection.query(itemQuery, [items], (err) => {
                         if (err) {
                             return connection.rollback(() => {

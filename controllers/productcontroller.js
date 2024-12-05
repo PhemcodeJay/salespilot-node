@@ -3,12 +3,29 @@ const router = express.Router();
 const multer = require('multer'); // For file uploads
 const path = require('path');
 const { db } = require('./db'); // Assume db is a configured database connection instance
+const fs = require('fs');
 
 // Middleware for file uploads
 const upload = multer({
     dest: 'uploads/products/',
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        if (['.jpg', '.jpeg', '.png', '.gif'].includes(ext)) {
+            return cb(null, true);
+        }
+        cb(new Error('Invalid file type. Only images are allowed.'));
+    }
 });
+
+// Ensure the upload directory exists
+const ensureDirectoryExistence = (filePath) => {
+    const dirname = path.dirname(filePath);
+    if (fs.existsSync(dirname)) {
+        return true;
+    }
+    fs.mkdirSync(dirname, { recursive: true });
+};
 
 // Sanitize input helper
 const sanitizeInput = (input) => input?.trim()?.replace(/[<>"]/g, '');
@@ -119,6 +136,7 @@ router.post('/product', upload.single('pic'), async (req, res) => {
         let imagePath = null;
         if (req.file) {
             imagePath = path.join(req.file.destination, req.file.filename);
+            ensureDirectoryExistence(imagePath); // Ensure directory exists before saving
         }
 
         // Check if product exists
