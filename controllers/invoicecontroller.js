@@ -12,6 +12,14 @@ const db = mysql.createConnection({
     database: process.env.DB_NAME,
 });
 
+db.connect((err) => {
+    if (err) {
+        console.error("Database connection failed: " + err.stack);
+        return;
+    }
+    console.log("Connected to the database.");
+});
+
 // Middleware to parse request bodies
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -31,7 +39,7 @@ app.get('/invoices', (req, res) => {
         const username = req.session.username;
 
         // Query to get user information
-        connection.query(
+        db.query(
             'SELECT id, username, date, email, phone, location, is_active, role, user_image FROM users WHERE username = ?',
             [username],
             (err, userInfo) => {
@@ -44,7 +52,7 @@ app.get('/invoices', (req, res) => {
                     const greeting = generateGreeting(user.username);
 
                     // Query to fetch invoices
-                    connection.query(
+                    db.query(
                         'SELECT invoice_id, invoice_number, customer_name, order_date, mode_of_payment, order_status, total_amount FROM invoices',
                         (err, invoices) => {
                             if (err) {
@@ -84,7 +92,7 @@ app.post('/invoices', (req, res) => {
         }
 
         // Start a transaction
-        connection.beginTransaction((err) => {
+        db.beginTransaction((err) => {
             if (err) {
                 return res.status(500).send("Transaction error: " + err.message);
             }
@@ -94,11 +102,11 @@ app.post('/invoices', (req, res) => {
                 INSERT INTO invoices (invoice_number, customer_name, invoice_description, order_date, order_status, 
                                       order_id, delivery_address, mode_of_payment, due_date, subtotal, discount, total_amount)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-            connection.query(invoiceQuery, [invoice_number, customer_name, invoice_description, order_date, order_status,
+            db.query(invoiceQuery, [invoice_number, customer_name, invoice_description, order_date, order_status,
                 order_id, delivery_address, mode_of_payment, due_date, subtotal, discount, total_amount], 
                 (err, result) => {
                     if (err) {
-                        return connection.rollback(() => {
+                        return db.rollback(() => {
                             res.status(500).send("Error inserting invoice data: " + err.message);
                         });
                     }
@@ -117,17 +125,17 @@ app.post('/invoices', (req, res) => {
                     });
 
                     // Execute the batch insert
-                    connection.query(itemQuery, [items], (err) => {
+                    db.query(itemQuery, [items], (err) => {
                         if (err) {
-                            return connection.rollback(() => {
+                            return db.rollback(() => {
                                 res.status(500).send("Error inserting invoice items: " + err.message);
                             });
                         }
 
                         // Commit the transaction
-                        connection.commit((err) => {
+                        db.commit((err) => {
                             if (err) {
-                                return connection.rollback(() => {
+                                return db.rollback(() => {
                                     res.status(500).send("Error committing transaction: " + err.message);
                                 });
                             }
