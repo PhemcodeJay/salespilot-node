@@ -1,18 +1,15 @@
-require('dotenv').config(); // Load environment variables from .env file
-
 const express = require('express');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const mysql = require('mysql2');
+const dotenv = require('dotenv');
 
-// Create Express app
-const app = express();
+// Load environment variables from .env file
+dotenv.config();
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const router = express.Router();
 
 // MySQL connection setup
 const db = mysql.createConnection({
@@ -25,8 +22,8 @@ const db = mysql.createConnection({
 // Nodemailer setup
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT || 587, // Default to port 587
-    secure: false, // Set to true if using port 465
+    port: process.env.SMTP_PORT || 587,
+    secure: false,
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
@@ -44,8 +41,28 @@ const sendEmail = (to, subject, text, html) => {
     });
 };
 
+// Serve the signup page
+router.get('/signup', (req, res) => {
+    res.sendFile(__dirname + '/signup.html');
+});
+
+// Serve the login page
+router.get('/login', (req, res) => {
+    res.sendFile(__dirname + '/login.html');
+});
+
+// Serve the password recovery page
+router.get('/recoverpwd', (req, res) => {
+    res.sendFile(__dirname + '/recoverpwd.html');
+});
+
+// Serve the account activation page
+router.get('/activate', (req, res) => {
+    res.sendFile(__dirname + '/activate.html');
+});
+
 // User Registration Route
-app.post('/signup', async (req, res) => {
+router.post('/signup', async (req, res) => {
     const { username, password, email, confirmpassword } = req.body;
 
     if (!username || !password || !email || !confirmpassword) {
@@ -94,7 +111,7 @@ app.post('/signup', async (req, res) => {
         );
 
         // Send activation email
-        const activationLink = `https://salespilot.cybertrendhub.store/activate.php?token=${activationCode}`;
+        const activationLink = `https://salespilot.cybertrendhub.store/activate?token=${activationCode}`;
         await sendEmail(email, 'Activate Your Account', `Click here to activate your account: ${activationLink}`, 
             `<a href="${activationLink}">Activate Account</a>`);
 
@@ -105,8 +122,8 @@ app.post('/signup', async (req, res) => {
     }
 });
 
-// Login Handler
-app.post('/login', async (req, res) => {
+// Login Route
+router.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -142,8 +159,8 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// Password Reset Request
-app.post('/password-reset', (req, res) => {
+// Password Reset Request Route
+router.post('/password-reset', (req, res) => {
     const { email } = req.body;
 
     if (!email) {
@@ -180,8 +197,8 @@ app.post('/password-reset', (req, res) => {
     });
 });
 
-// Reset Password Handler
-app.post('/reset-password', (req, res) => {
+// Reset Password Route
+router.post('/reset-password', (req, res) => {
     const { password, confirmPassword, token } = req.body;
 
     if (!password || !confirmPassword || password !== confirmPassword || password.length < 5 || password.length > 20) {
@@ -219,8 +236,4 @@ app.post('/reset-password', (req, res) => {
     });
 });
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+module.exports = router;

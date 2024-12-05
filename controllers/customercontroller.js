@@ -1,7 +1,17 @@
-const { Op } = require('sequelize');
-const { Inventory, Product, Report, User, Customer } = require('../models'); // Assuming Sequelize models are set up
+const mysql = require('mysql2');
 const jwt = require('jsonwebtoken');
 const PDFDocument = require('pdfkit');
+
+// Create a MySQL connection pool
+const pool = mysql.createPool({
+    host: 'localhost',
+    user: 'your-db-username', // Replace with actual DB username
+    password: 'your-db-password', // Replace with actual DB password
+    database: 'salespilot',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
 
 exports.supplierController = async (req, res) => {
     try {
@@ -14,63 +24,53 @@ exports.supplierController = async (req, res) => {
         const username = decoded.username;
 
         // Fetch user info
-        const user = await User.findOne({
-            where: { username },
-            attributes: ['username', 'email', 'date', 'phone', 'location', 'user_image']
-        });
-
-        if (!user) {
-            throw new Error("User not found.");
-        }
-
-        const { email, date, location, user_image } = user;
-        const formattedDate = new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-        const imageToDisplay = user_image || 'uploads/user/default.png';
-
-        // Fetch inventory notifications
-        const inventoryNotifications = await Inventory.findAll({
-            where: {
-                available_stock: {
-                    [Op.lt]: 10,
-                    [Op.gt]: 1000
-                }
-            },
-            include: {
-                model: Product,
-                attributes: ['image_path']
+        pool.query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username], (err, results) => {
+            if (err) {
+                console.error("Error fetching user info: ", err);
+                return res.status(500).json({ message: 'Error fetching user info' });
             }
-        });
 
-        // Fetch reports notifications
-        const reportsNotifications = await Report.findAll({
-            where: {
-                revenue_by_product: {
-                    [Op.or]: [
-                        { [Op.gt]: 10000 },
-                        { [Op.lt]: 1000 }
-                    ]
-                }
-            },
-            include: {
-                model: Product,
-                attributes: ['image_path']
+            if (results.length === 0) {
+                return res.status(404).json({ message: 'User not found.' });
             }
-        });
 
-        // Fetch all customers
-        const customers = await Customer.findAll({
-            attributes: ['customer_id', 'customer_name', 'customer_email', 'customer_phone', 'customer_location']
-        });
+            const { email, date, location, user_image } = results[0];
+            const formattedDate = new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-        // Rendering view or returning JSON
-        res.render('supplierDashboard', {
-            user: { username, email, date: formattedDate, location, imageToDisplay },
-            inventoryNotifications,
-            reportsNotifications,
-            customers
-        });
+            const imageToDisplay = user_image || 'uploads/user/default.png';
 
+            // Fetch inventory notifications
+            pool.query('SELECT * FROM inventory WHERE available_stock < ? OR available_stock > ?', [10, 1000], (err, inventoryNotifications) => {
+                if (err) {
+                    console.error("Error fetching inventory notifications: ", err);
+                    return res.status(500).json({ message: 'Error fetching inventory notifications' });
+                }
+
+                // Fetch reports notifications
+                pool.query('SELECT * FROM reports WHERE revenue_by_product > ? OR revenue_by_product < ?', [10000, 1000], (err, reportsNotifications) => {
+                    if (err) {
+                        console.error("Error fetching reports notifications: ", err);
+                        return res.status(500).json({ message: 'Error fetching reports notifications' });
+                    }
+
+                    // Fetch all customers
+                    pool.query('SELECT customer_id, customer_name, customer_email, customer_phone, customer_location FROM customers', (err, customers) => {
+                        if (err) {
+                            console.error("Error fetching customers: ", err);
+                            return res.status(500).json({ message: 'Error fetching customers' });
+                        }
+
+                        // Render the view or return JSON
+                        res.render('supplierDashboard', {
+                            user: { username, email, date: formattedDate, location, imageToDisplay },
+                            inventoryNotifications,
+                            reportsNotifications,
+                            customers
+                        });
+                    });
+                });
+            });
+        });
     } catch (err) {
         console.error("Error: ", err);
         res.status(500).json({ message: err.message });
@@ -83,41 +83,51 @@ exports.handleCustomerActions = async (req, res) => {
         const { action, customer_id, customer_name, customer_email, customer_phone, customer_location } = req.body;
 
         if (action === 'delete') {
-            await Customer.destroy({
-                where: { customer_id }
+            pool.query('DELETE FROM customers WHERE customer_id = ?', [customer_id], (err, result) => {
+                if (err) {
+                    console.error("Error deleting customer: ", err);
+                    return res.status(500).json({ message: 'Error deleting customer' });
+                }
+                return res.redirect('/customers');
             });
-            return res.redirect('/customers');
         }
 
         if (action === 'save_pdf') {
             // Generate PDF for customer
-            const customer = await Customer.findByPk(customer_id);
-            if (!customer) {
-                return res.status(404).json({ message: 'Customer not found.' });
-            }
+            pool.query('SELECT * FROM customers WHERE customer_id = ?', [customer_id], (err, results) => {
+                if (err) {
+                    console.error("Error fetching customer: ", err);
+                    return res.status(500).json({ message: 'Error fetching customer' });
+                }
 
-            const doc = new PDFDocument();
-            doc.fontSize(12).text(`Customer Details`, 100, 100);
-            doc.text(`Name: ${customer.customer_name}`);
-            doc.text(`Email: ${customer.customer_email}`);
-            doc.text(`Phone: ${customer.customer_phone}`);
-            doc.text(`Location: ${customer.customer_location}`);
-            doc.end();
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename=customer_${customer_id}.pdf`);
-            doc.pipe(res);
-            return;
+                if (results.length === 0) {
+                    return res.status(404).json({ message: 'Customer not found.' });
+                }
+
+                const customer = results[0];
+                const doc = new PDFDocument();
+                doc.fontSize(12).text(`Customer Details`, 100, 100);
+                doc.text(`Name: ${customer.customer_name}`);
+                doc.text(`Email: ${customer.customer_email}`);
+                doc.text(`Phone: ${customer.customer_phone}`);
+                doc.text(`Location: ${customer.customer_location}`);
+                doc.end();
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename=customer_${customer_id}.pdf`);
+                doc.pipe(res);
+                return;
+            });
         }
 
         if (action === 'update') {
-            await Customer.upsert({
-                customer_id,
-                customer_name,
-                customer_email,
-                customer_phone,
-                customer_location
-            });
-            return res.redirect('/customers');
+            pool.query('INSERT INTO customers (customer_id, customer_name, customer_email, customer_phone, customer_location) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE customer_name = ?, customer_email = ?, customer_phone = ?, customer_location = ?',
+                [customer_id, customer_name, customer_email, customer_phone, customer_location, customer_name, customer_email, customer_phone, customer_location], (err, result) => {
+                    if (err) {
+                        console.error("Error updating customer: ", err);
+                        return res.status(500).json({ message: 'Error updating customer' });
+                    }
+                    return res.redirect('/customers');
+                });
         }
 
     } catch (err) {

@@ -1,4 +1,3 @@
-// controllers/expenseController.js
 const db = require('../config/db'); // MySQL connection
 
 // Function to fetch all expenses

@@ -4,12 +4,12 @@ const router = express.Router();
 const moment = require('moment');
 const { validationResult } = require('express-validator');
 
-// Create a MySQL connection
+// Create a MySQL connection with mysql2
 const connection = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'salespilot'
+  database: 'dbs13455438'
 });
 
 // Middleware to check if user is logged in
