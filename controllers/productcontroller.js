@@ -5,6 +5,14 @@ const path = require('path');
 const { db } = require('./db'); // Assume db is a configured database connection instance
 const fs = require('fs');
 
+// MySQL connection setup
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+});
+
 // Middleware for file uploads
 const upload = multer({
     dest: 'uploads/products/',

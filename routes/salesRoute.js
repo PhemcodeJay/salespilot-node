@@ -7,6 +7,14 @@ const path = require('path');
 // Router initialization
 const router = express.Router();
 
+// MySQL connection setup
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+});
+
 // Middleware to validate session
 function validateSession(req, res, next) {
     if (!req.session.username) {

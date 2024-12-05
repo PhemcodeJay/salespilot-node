@@ -1,10 +1,5 @@
 const express = require('express');
 const mysql = require('mysql2');
-const session = require('express-session');
-const bcrypt = require('bcryptjs');
-const { json } = require('body-parser');
-const path = require('path');
-const fs = require('fs');
 const FPDF = require('fpdf'); // PDF generation
 
 const router = express.Router();
@@ -25,61 +20,7 @@ const checkLogin = (req, res, next) => {
     next();
 };
 
-// Middleware to sanitize user input
-const sanitizeInput = (input) => {
-    return input.replace(/[^a-zA-Z0-9 ]/g, "");
-};
-
-// Fetch Inventory and Reports Notifications
-router.get('/notifications', (req, res) => {
-    try {
-        // Inventory Notifications
-        db.query(`
-            SELECT i.product_name, i.available_stock, i.inventory_qty, i.sales_qty, p.image_path
-            FROM inventory i
-            JOIN products p ON i.product_id = p.id
-            WHERE i.available_stock < ? OR i.available_stock > ?
-            ORDER BY i.last_updated DESC`, [10, 1000], (err, inventoryNotifications) => {
-            if (err) return res.status(500).json({ message: 'Database error', error: err });
-            
-            // Reports Notifications
-            db.query(`
-                SELECT JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.product_name')) AS product_name, 
-                JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) AS revenue,
-                p.image_path
-                FROM reports r
-                JOIN products p ON JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.product_id')) = p.id
-                WHERE JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) > ? 
-                OR JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) < ?
-                ORDER BY r.report_date DESC`, [10000, 1000], (err, reportsNotifications) => {
-                
-                if (err) return res.status(500).json({ message: 'Database error', error: err });
-
-                res.json({ inventoryNotifications, reportsNotifications });
-            });
-        });
-    } catch (err) {
-        res.status(500).json({ message: 'Server error', error: err });
-    }
-});
-
-// Fetch User Information
-router.get('/user', checkLogin, (req, res) => {
-    const username = sanitizeInput(req.session.username);
-
-    db.query(`SELECT username, email, date FROM users WHERE username = ?`, [username], (err, user_info) => {
-        if (err) return res.status(500).json({ message: 'Database error', error: err });
-        
-        if (user_info.length === 0) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        const { email, date } = user_info[0];
-        res.json({ email, date });
-    });
-});
-
-// Handle Supplier Insert and Update
+// Handle Supplier Insert
 router.post('/supplier', checkLogin, (req, res) => {
     const { supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty } = req.body;
 
@@ -89,7 +30,8 @@ router.post('/supplier', checkLogin, (req, res) => {
 
     db.query(`
         INSERT INTO suppliers (supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`, [supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty], (err, result) => {
+        VALUES (?, ?, ?, ?, ?, ?, ?)`, 
+        [supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty], (err, result) => {
         
         if (err) return res.status(500).json({ message: 'Error inserting supplier', error: err });
         
@@ -158,6 +100,15 @@ router.get('/supplier/pdf/:supplier_id', checkLogin, (req, res) => {
         pdf.cell(40, 10, `Location: ${supplierData.supplier_location}`);
         
         pdf.output('D', `supplier_${supplier_id}.pdf`);
+    });
+});
+
+// Fetch Supplier List
+router.get('/suppliers', checkLogin, (req, res) => {
+    db.query('SELECT * FROM suppliers', (err, suppliers) => {
+        if (err) return res.status(500).json({ message: 'Error fetching suppliers', error: err });
+
+        res.json({ suppliers });
     });
 });
 

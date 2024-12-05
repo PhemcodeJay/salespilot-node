@@ -12,6 +12,14 @@ const sequelize = new Sequelize('salespilot', 'root', '', {
     dialect: 'mysql',
 });
 
+// MySQL connection setup
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+});
+
 // Models
 const Users = sequelize.define('Users', {
     username: { type: DataTypes.STRING, allowNull: false },

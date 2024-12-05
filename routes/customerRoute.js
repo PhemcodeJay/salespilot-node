@@ -3,6 +3,14 @@ const router = express.Router();
 const { Customer } = require('../models'); // Assuming Sequelize is used for database models
 const jwt = require('jsonwebtoken');
 
+// MySQL connection setup
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+});
+
 // Middleware to check authentication (Example, assuming JWT is used)
 const checkAuth = (req, res, next) => {
     const token = req.cookies['auth_token'];

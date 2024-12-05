@@ -12,6 +12,15 @@ const {
   getIncomeOverview
 } = require('./analyticsController');
 
+
+// MySQL connection setup
+const db = mysql.createConnection({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+});
+
 // Define the route for handling analytics requests
 router.get('/analytics', checkUserLoggedIn, async (req, res) => {
   try {

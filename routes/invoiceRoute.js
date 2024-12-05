@@ -2,14 +2,13 @@ const express = require('express');
 const router = express.Router();
 const mysql = require('mysql2');
 
-// MySQL database connection
-const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'salespilot'
+// MySQL connection setup
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
 });
-
 // Route to display invoice page (GET)
 router.get('/invoices', (req, res) => {
     // Ensure the user is logged in

@@ -3,12 +3,12 @@ const mysql = require('mysql2');
 const PDFDocument = require('pdfkit');
 const router = express.Router();
 
-// Database connection setup
-const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'salespilot'
+// MySQL connection setup
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
 });
 
 // Middleware to check if user is logged in

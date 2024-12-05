@@ -4,6 +4,16 @@ const multer = require('multer');
 const path = require('path');
 const { db } = require('./db'); // Assuming db is a configured database connection instance
 
+
+// MySQL connection setup
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+});
+
+
 // Middleware for file uploads
 const upload = multer({
     dest: 'uploads/products/', // Directory to store uploaded files

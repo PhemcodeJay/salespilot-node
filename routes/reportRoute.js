@@ -6,12 +6,12 @@ const { User, Product, Category, Sale, SalesAnalytics, Inventory, Report, sequel
 
 const router = express.Router();
 
-// MySQL connection setup using mysql2
+// MySQL connection setup
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '', // Replace with your actual password
-    database: 'salespilot'
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
 });
 
 // Session configuration

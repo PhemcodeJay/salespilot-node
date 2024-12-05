@@ -2,6 +2,16 @@ const express = require('express');
 const router = express.Router();
 const expenseController = require('../controllers/expenseController'); // Import expense controller
 
+
+// MySQL connection setup
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+});
+
+
 // Middleware to check authentication (if needed)
 const checkAuth = (req, res, next) => {
     const token = req.cookies['auth_token'];

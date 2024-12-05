@@ -4,12 +4,12 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const app = express();
 
-// MySQL database connection
-const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'salespilot'
+// MySQL connection setup
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
 });
 
 // Middleware to parse request bodies

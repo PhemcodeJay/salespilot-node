@@ -4,12 +4,12 @@ const mysql = require('mysql2');
 const { Op } = require('sequelize');
 const moment = require('moment'); // For date manipulation
 
-// Create a MySQL connection pool
-const pool = mysql.createPool({
-    host: 'localhost',
-    user: 'your_user',
-    password: 'your_password',
-    database: 'your_database'
+// MySQL connection setup
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
 });
 
 const router = express.Router();
