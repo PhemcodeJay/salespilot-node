@@ -1,4 +1,4 @@
-const reportModel = require('../models/report'); // Import the report model
+const reportModel = require('./models/report'); // Import the report model
 const dayjs = require('dayjs'); // Date library
 
 // Create a report

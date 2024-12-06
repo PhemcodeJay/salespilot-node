@@ -14,15 +14,63 @@ const pool = mysql.createPool({
 });
 
 // Helper function to execute database queries
-const executeQuery = (query, params, res) => {
-    pool.query(query, params, (err, results) => {
-        if (err) {
-            console.error('Database Query Error:', err.message);
-            return res.status(500).json({ error: 'Database query error', details: err.message });
-        }
-        res.json(results);
+const executeQuery = (query, params) => {
+    return new Promise((resolve, reject) => {
+        pool.query(query, params, (err, results) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(results);
+            }
+        });
     });
 };
+
+// Route to fetch notifications (inventory + reports combined)
+router.get('/notifications', async (req, res) => {
+    try {
+        const lowStock = 10;
+        const highStock = 1000;
+
+        // Inventory query
+        const inventoryQuery = `
+            SELECT i.product_name, i.available_stock, i.inventory_qty, i.sales_qty, p.image_path
+            FROM inventory i
+            JOIN products p ON i.product_id = p.id
+            WHERE i.available_stock < ? OR i.available_stock > ?
+            ORDER BY i.last_updated DESC
+        `;
+        const inventoryNotifications = await executeQuery(inventoryQuery, [lowStock, highStock]);
+
+        const highRevenue = 10000;
+        const lowRevenue = 1000;
+
+        // Reports query
+        const reportsQuery = `
+            SELECT JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.product_name')) AS product_name, 
+                   JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) AS revenue,
+                   p.image_path
+            FROM reports r
+            JOIN products p ON JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.product_id')) = p.id
+            WHERE JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) > ? 
+               OR JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) < ?
+            ORDER BY r.report_date DESC
+        `;
+        const reportsNotifications = await executeQuery(reportsQuery, [highRevenue, lowRevenue]);
+
+        // Total notifications count
+        const totalNotifications = inventoryNotifications.length + reportsNotifications.length;
+
+        res.json({
+            totalNotifications,
+            inventoryNotifications,
+            reportsNotifications
+        });
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        res.status(500).json({ error: 'Error fetching notifications' });
+    }
+});
 
 // Route to fetch inventory notifications
 router.get('/inventory', (req, res) => {
@@ -37,7 +85,9 @@ router.get('/inventory', (req, res) => {
         ORDER BY i.last_updated DESC
     `;
 
-    executeQuery(query, [lowStock, highStock], res);
+    executeQuery(query, [lowStock, highStock])
+        .then(results => res.json(results))
+        .catch(err => res.status(500).json({ error: 'Database query error', details: err.message }));
 });
 
 // Route to fetch report notifications
@@ -56,7 +106,9 @@ router.get('/reports', (req, res) => {
         ORDER BY r.report_date DESC
     `;
 
-    executeQuery(query, [highRevenue, lowRevenue], res);
+    executeQuery(query, [highRevenue, lowRevenue])
+        .then(results => res.json(results))
+        .catch(err => res.status(500).json({ error: 'Database query error', details: err.message }));
 });
 
 // Route to fetch sales notifications
@@ -72,7 +124,9 @@ router.get('/sales', (req, res) => {
         ORDER BY s.sale_date DESC
     `;
 
-    executeQuery(query, [lowSales, highSales], res);
+    executeQuery(query, [lowSales, highSales])
+        .then(results => res.json(results))
+        .catch(err => res.status(500).json({ error: 'Database query error', details: err.message }));
 });
 
 // Route to fetch customer notifications
@@ -87,7 +141,9 @@ router.get('/customers', (req, res) => {
         ORDER BY c.registration_date DESC
     `;
 
-    executeQuery(query, [newCustomerThreshold], res);
+    executeQuery(query, [newCustomerThreshold])
+        .then(results => res.json(results))
+        .catch(err => res.status(500).json({ error: 'Database query error', details: err.message }));
 });
 
 // Route to fetch notifications for any other categories dynamically
@@ -101,7 +157,9 @@ router.get('/:category', (req, res) => {
 
     const query = `SELECT * FROM ?? WHERE notification_flag = 1`;
 
-    executeQuery(query, [category], res);
+    executeQuery(query, [category])
+        .then(results => res.json(results))
+        .catch(err => res.status(500).json({ error: 'Database query error', details: err.message }));
 });
 
 module.exports = router;
