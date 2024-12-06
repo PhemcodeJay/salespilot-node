@@ -24,6 +24,7 @@ const pageAccessRoute = require('./routes/page-accessRoute');
 const payRoute = require('./routes/payRoute');
 const profileRoute = require('./routes/profileRoute');
 const staffRoute = require('./routes/staffRoute');
+const subscriptionRoute = require('./routes/subscriptionRoute');
 
 // Initialize Express App
 const app = express();
