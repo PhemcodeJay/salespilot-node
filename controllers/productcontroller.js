@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer'); // For file uploads
+const multer = require('multer');
 const path = require('path');
-const { db } = require('./db'); // Assume db is a configured database connection instance
 const fs = require('fs');
-
+const mysql = require('mysql2');
+const jwt = require('jsonwebtoken');
+const { db } = require('./db'); // Assume db is a configured database connection instance
 // MySQL connection setup
 const db = mysql.createConnection({
     host: process.env.DB_HOST,
@@ -12,13 +13,43 @@ const db = mysql.createConnection({
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
 });
+// MySQL connection pool setup
+const pool = mysql.createPool({
+    host: 'localhost',
+    user: 'root', // Replace with actual DB username
+    password: '', // Replace with actual DB password
+    database: 'dbs13455438',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+// JWT token verification function
+const verifyToken = (token) => {
+    try {
+        return jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+        return null;
+    }
+};
+
+// Fetch user details by token
+const fetchUserInfo = (username) => {
+    return new Promise((resolve, reject) => {
+        pool.query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username], (err, results) => {
+            if (err) return reject("Error fetching user info");
+            if (results.length === 0) return reject("User not found.");
+            resolve(results[0]);
+        });
+    });
+};
 
 // Middleware for file uploads
 const upload = multer({
     dest: 'uploads/products/',
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
     fileFilter: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
+        const ext = path.extname(file.originalname).toLowerCase();
         if (['.jpg', '.jpeg', '.png', '.gif'].includes(ext)) {
             return cb(null, true);
         }
@@ -29,10 +60,9 @@ const upload = multer({
 // Ensure the upload directory exists
 const ensureDirectoryExistence = (filePath) => {
     const dirname = path.dirname(filePath);
-    if (fs.existsSync(dirname)) {
-        return true;
+    if (!fs.existsSync(dirname)) {
+        fs.mkdirSync(dirname, { recursive: true });
     }
-    fs.mkdirSync(dirname, { recursive: true });
 };
 
 // Sanitize input helper
@@ -72,7 +102,7 @@ router.get('/user', async (req, res) => {
 // Fetch products
 router.get('/products', async (req, res) => {
     try {
-        const products = await db.query(
+        const [products] = await db.query(
             'SELECT id, name, description, price, image_path, category, inventory_qty, cost FROM products'
         );
         res.json({ success: true, products });
@@ -98,6 +128,7 @@ router.post('/product', upload.single('pic'), async (req, res) => {
     } = req.body;
 
     try {
+        // Sanitize input data
         const sanitizedData = {
             name: sanitizeInput(name),
             staff_name: sanitizeInput(staff_name),
@@ -111,7 +142,7 @@ router.post('/product', upload.single('pic'), async (req, res) => {
             new_category: sanitizeInput(new_category),
         };
 
-        // Category logic
+        // Determine category
         let category_id;
         if (sanitizedData.category_name === 'New' && sanitizedData.new_category) {
             const [existingCategory] = await db.query(
@@ -158,7 +189,7 @@ router.post('/product', upload.single('pic'), async (req, res) => {
             await db.query(
                 `UPDATE products 
                  SET staff_name = ?, product_type = ?, cost = ?, price = ?, stock_qty = ?, 
-                     supply_qty = ?, description = ?, image_path = ?, category_id = ?
+                     supply_qty = ?, description = ?, image_path = ?, category_id = ? 
                  WHERE id = ?`,
                 [
                     sanitizedData.staff_name,
@@ -177,7 +208,7 @@ router.post('/product', upload.single('pic'), async (req, res) => {
             // Insert new product
             await db.query(
                 `INSERT INTO products 
-                 (name, staff_name, product_type, category_id, cost, price, stock_qty, supply_qty, description, image_path)
+                 (name, staff_name, product_type, category_id, cost, price, stock_qty, supply_qty, description, image_path) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     sanitizedData.name,
@@ -200,8 +231,6 @@ router.post('/product', upload.single('pic'), async (req, res) => {
         res.status(500).json({ success: false, message: "Server error." });
     }
 });
-
-
 
 // Export the router
 module.exports = router;

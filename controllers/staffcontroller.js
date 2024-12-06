@@ -3,7 +3,19 @@ const mysql = require('mysql2');
 const session = require('express-session');
 const PDFDocument = require('pdfkit');
 const path = require('path');
+const jwt = require('jsonwebtoken'); // Added for JWT functionality
 const app = express();
+
+// MySQL connection pool setup
+const pool = mysql.createPool({
+    host: 'localhost',
+    user: 'root', // Replace with actual DB username
+    password: '', // Replace with actual DB password
+    database: 'dbs13455438',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
 
 // Use express-session for session handling
 app.use(session({
@@ -13,17 +25,29 @@ app.use(session({
     cookie: { secure: false }  // Set to false for development (ensure HTTPS for production)
 }));
 
+// JWT token verification function
+const verifyToken = (token) => {
+    try {
+        return jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+        return null;
+    }
+};
+
+// Fetch user details by token
+const fetchUserInfo = (username) => {
+    return new Promise((resolve, reject) => {
+        pool.query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username], (err, results) => {
+            if (err) return reject("Error fetching user info");
+            if (results.length === 0) return reject("User not found.");
+            resolve(results[0]);
+        });
+    });
+};
+
 // Configure body parser middleware to parse POST data
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
-// MySQL connection setup
-const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-});
 
 // Fetch inventory and report notifications with product images
 app.get('/notifications', (req, res) => {
@@ -38,7 +62,7 @@ app.get('/notifications', (req, res) => {
         WHERE i.available_stock < ? OR i.available_stock > ?
         ORDER BY i.last_updated DESC
     `;
-    connection.execute(inventoryQuery, [10, 1000], (err, inventoryNotifications) => {
+    pool.query(inventoryQuery, [10, 1000], (err, inventoryNotifications) => {
         if (err) return res.status(500).send(err.message);
 
         const reportsQuery = `
@@ -51,7 +75,7 @@ app.get('/notifications', (req, res) => {
                OR JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) < ?
             ORDER BY r.report_date DESC
         `;
-        connection.execute(reportsQuery, [10000, 1000], (err, reportsNotifications) => {
+        pool.query(reportsQuery, [10000, 1000], (err, reportsNotifications) => {
             if (err) return res.status(500).send(err.message);
             
             res.json({ inventoryNotifications, reportsNotifications });
@@ -66,7 +90,7 @@ app.get('/user-info', (req, res) => {
     }
 
     const query = "SELECT username, email, date FROM users WHERE username = ?";
-    connection.execute(query, [req.session.username], (err, user_info) => {
+    pool.query(query, [req.session.username], (err, user_info) => {
         if (err) return res.status(500).send(err.message);
         if (!user_info.length) return res.status(404).send('User not found.');
 
@@ -91,7 +115,7 @@ app.post('/staff', (req, res) => {
             ? [staff_name, staff_email, staff_phone, position, staff_id] 
             : [staff_name, staff_email, staff_phone, position];
 
-        connection.execute(query, params, (err, result) => {
+        pool.query(query, params, (err, result) => {
             if (err) return res.status(500).send(err.message);
             res.redirect('/page-list-staffs');
         });
@@ -102,7 +126,7 @@ app.post('/staff', (req, res) => {
         if (!staff_id) return res.status(400).send('Staff ID is required for deletion.');
         
         const deleteQuery = "DELETE FROM staffs WHERE staff_id = ?";
-        connection.execute(deleteQuery, [staff_id], (err, result) => {
+        pool.query(deleteQuery, [staff_id], (err, result) => {
             if (err) return res.status(500).send(err.message);
             res.json({ success: 'Staff deleted' });
         });
@@ -118,7 +142,7 @@ app.post('/generate-pdf', (req, res) => {
     }
 
     const query = "SELECT * FROM staffs WHERE staff_id = ?";
-    connection.execute(query, [staff_id], (err, staff) => {
+    pool.query(query, [staff_id], (err, staff) => {
         if (err) return res.status(500).send(err.message);
         if (!staff.length) return res.status(404).send('Staff not found.');
 
@@ -142,3 +166,11 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+// Export functions for modularity
+module.exports = {
+    fetchUserInfo,
+    addOrUpdateStaff,
+    deleteStaff,
+    generateStaffPDF
+};

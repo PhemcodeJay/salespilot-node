@@ -20,26 +20,13 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
-// JWT token verification function
-const verifyToken = (token) => {
-    try {
-        return jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-        return null;
-    }
-};
-
-// Fetch user details by token
-const fetchUserInfo = (username) => {
-    return new Promise((resolve, reject) => {
-        pool.query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username], (err, results) => {
-            if (err) return reject("Error fetching user info");
-            if (results.length === 0) return reject("User not found.");
-            resolve(results[0]);
-        });
-    });
-};
-
+// MySQL connection setup
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+});
 // Function to send an email (can be modified based on your email service)
 const sendEmail = async (email, subject, text) => {
     const transporter = nodemailer.createTransport({

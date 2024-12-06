@@ -4,6 +4,16 @@ const mysql = require('mysql2');
 const { Op } = require('sequelize');
 const moment = require('moment'); // For date manipulation
 
+// MySQL connection pool setup
+const pool = mysql.createPool({
+    host: 'localhost',
+    user: 'root', // Replace with actual DB username
+    password: '', // Replace with actual DB password
+    database: 'dbs13455438',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
 // MySQL connection setup
 const db = mysql.createConnection({
     host: process.env.DB_HOST,
@@ -11,6 +21,25 @@ const db = mysql.createConnection({
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
 });
+// JWT token verification function
+const verifyToken = (token) => {
+    try {
+        return jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+        return null;
+    }
+};
+
+// Fetch user details by token
+const fetchUserInfo = (username) => {
+    return new Promise((resolve, reject) => {
+        pool.query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username], (err, results) => {
+            if (err) return reject("Error fetching user info");
+            if (results.length === 0) return reject("User not found.");
+            resolve(results[0]);
+        });
+    });
+};
 
 const router = express.Router();
 
@@ -40,9 +69,9 @@ router.use(checkSession);
 async function getUserInfo(username) {
     const query = 'SELECT * FROM users WHERE username = ?';
     return new Promise((resolve, reject) => {
-        pool.query(query, [username], (err, results) => {
-            if (err) reject(new Error("Error: User not found."));
-            if (results.length === 0) reject(new Error("Error: User not found."));
+        db.query(query, [username], (err, results) => {
+            if (err) return reject(new Error("Error: User not found."));
+            if (results.length === 0) return reject(new Error("Error: User not found."));
             resolve(results[0]);
         });
     });
@@ -65,8 +94,8 @@ async function calculateProductCategoryMetrics() {
         GROUP BY categories.category_name
     `;
     return new Promise((resolve, reject) => {
-        pool.query(query, (err, results) => {
-            if (err) reject(err);
+        db.query(query, (err, results) => {
+            if (err) return reject(err);
             resolve(results);
         });
     });
@@ -107,8 +136,8 @@ async function getPreviousYearRevenue(date) {
     const previousYearDate = moment(date).subtract(1, 'year').format('YYYY-MM-DD');
     const query = 'SELECT revenue FROM sales_analytics WHERE date LIKE ?';
     return new Promise((resolve, reject) => {
-        pool.query(query, [`${previousYearDate}%`], (err, results) => {
-            if (err) reject(err);
+        db.query(query, [`${previousYearDate}%`], (err, results) => {
+            if (err) return reject(err);
             resolve(results.length > 0 ? results[0].revenue : 0);
         });
     });
@@ -123,8 +152,8 @@ function calculateYearOverYearGrowth(totalSales, previousYearRevenue) {
 async function checkIfReportExists(date) {
     const query = 'SELECT * FROM sales_analytics WHERE date = ?';
     return new Promise((resolve, reject) => {
-        pool.query(query, [date], (err, results) => {
-            if (err) reject(err);
+        db.query(query, [date], (err, results) => {
+            if (err) return reject(err);
             resolve(results.length > 0 ? results[0] : null);
         });
     });
@@ -132,23 +161,16 @@ async function checkIfReportExists(date) {
 
 // Insert or update the report in the database
 async function saveReport(date, reportData, existingReport = null) {
-    if (existingReport) {
-        const query = 'UPDATE sales_analytics SET ? WHERE id = ?';
-        return new Promise((resolve, reject) => {
-            pool.query(query, [reportData, existingReport.id], (err, results) => {
-                if (err) reject(err);
-                resolve(results);
-            });
+    const query = existingReport 
+        ? 'UPDATE sales_analytics SET ? WHERE id = ?' 
+        : 'INSERT INTO sales_analytics SET ?';
+
+    return new Promise((resolve, reject) => {
+        db.query(query, [reportData, existingReport ? existingReport.id : null], (err, results) => {
+            if (err) return reject(err);
+            resolve(results);
         });
-    } else {
-        const query = 'INSERT INTO sales_analytics SET ?';
-        return new Promise((resolve, reject) => {
-            pool.query(query, [reportData], (err, results) => {
-                if (err) reject(err);
-                resolve(results);
-            });
-        });
-    }
+    });
 }
 
 // Fetch inventory and report notifications
@@ -164,10 +186,10 @@ async function getNotifications() {
         ORDER BY report_date DESC
     `;
     return new Promise((resolve, reject) => {
-        pool.query(inventoryQuery, (err, inventoryNotifications) => {
-            if (err) reject(err);
-            pool.query(reportQuery, (err, reportNotifications) => {
-                if (err) reject(err);
+        db.query(inventoryQuery, (err, inventoryNotifications) => {
+            if (err) return reject(err);
+            db.query(reportQuery, (err, reportNotifications) => {
+                if (err) return reject(err);
                 resolve({ inventoryNotifications, reportNotifications });
             });
         });

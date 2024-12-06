@@ -6,6 +6,7 @@ const { json } = require('body-parser');
 const path = require('path');
 const fs = require('fs');
 const FPDF = require('fpdf'); // PDF generation
+const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
@@ -16,6 +17,26 @@ const db = mysql.createConnection({
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
 });
+
+// MySQL connection pool setup
+const pool = mysql.createPool({
+    host: 'localhost',
+    user: 'root', // Replace with actual DB username
+    password: '', // Replace with actual DB password
+    database: 'dbs13455438',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+// JWT token verification function
+const verifyToken = (token) => {
+    try {
+        return jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+        return null;
+    }
+};
 
 // Middleware to check if the user is logged in
 const checkLogin = (req, res, next) => {
@@ -41,7 +62,7 @@ router.get('/notifications', (req, res) => {
             WHERE i.available_stock < ? OR i.available_stock > ?
             ORDER BY i.last_updated DESC`, [10, 1000], (err, inventoryNotifications) => {
             if (err) return res.status(500).json({ message: 'Database error', error: err });
-            
+
             // Reports Notifications
             db.query(`
                 SELECT JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.product_name')) AS product_name, 
@@ -52,7 +73,7 @@ router.get('/notifications', (req, res) => {
                 WHERE JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) > ? 
                 OR JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) < ?
                 ORDER BY r.report_date DESC`, [10000, 1000], (err, reportsNotifications) => {
-                
+
                 if (err) return res.status(500).json({ message: 'Database error', error: err });
 
                 res.json({ inventoryNotifications, reportsNotifications });
@@ -63,24 +84,26 @@ router.get('/notifications', (req, res) => {
     }
 });
 
-// Fetch User Information
-router.get('/user', checkLogin, (req, res) => {
-    const username = sanitizeInput(req.session.username);
-
-    db.query(`SELECT username, email, date FROM users WHERE username = ?`, [username], (err, user_info) => {
+// Fetch All Suppliers
+router.get('/suppliers', checkLogin, (req, res) => {
+    db.query('SELECT * FROM suppliers', (err, results) => {
         if (err) return res.status(500).json({ message: 'Database error', error: err });
-        
-        if (user_info.length === 0) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        const { email, date } = user_info[0];
-        res.json({ email, date });
+        res.json(results);
     });
 });
 
-// Handle Supplier Insert and Update
-router.post('/supplier', checkLogin, (req, res) => {
+// Fetch Single Supplier
+router.get('/suppliers/:supplier_id', checkLogin, (req, res) => {
+    const supplier_id = req.params.supplier_id;
+    db.query('SELECT * FROM suppliers WHERE supplier_id = ?', [supplier_id], (err, results) => {
+        if (err) return res.status(500).json({ message: 'Database error', error: err });
+        if (results.length === 0) return res.status(404).json({ message: 'Supplier not found' });
+        res.json(results[0]);
+    });
+});
+
+// Create New Supplier
+router.post('/suppliers', checkLogin, (req, res) => {
     const { supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty } = req.body;
 
     if (!supplier_name || !product_name || !supply_qty) {
@@ -89,55 +112,51 @@ router.post('/supplier', checkLogin, (req, res) => {
 
     db.query(`
         INSERT INTO suppliers (supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`, [supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty], (err, result) => {
-        
-        if (err) return res.status(500).json({ message: 'Error inserting supplier', error: err });
-        
-        res.status(201).json({ message: 'Supplier added successfully' });
+        VALUES (?, ?, ?, ?, ?, ?, ?)`, 
+        [supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty], 
+        (err, result) => {
+            if (err) return res.status(500).json({ message: 'Error inserting supplier', error: err });
+            res.status(201).json({ message: 'Supplier added successfully', supplier_id: result.insertId });
+        }
+    );
+});
+
+// Update Supplier Information
+router.put('/suppliers/:supplier_id', checkLogin, (req, res) => {
+    const { supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty } = req.body;
+    const supplier_id = req.params.supplier_id;
+
+    if (!supplier_name || !product_name || !supply_qty) {
+        return res.status(400).json({ message: 'All fields are required.' });
+    }
+
+    db.query(`
+        UPDATE suppliers 
+        SET supplier_name = ?, product_name = ?, supplier_email = ?, supplier_phone = ?, supplier_location = ?, note = ?, supply_qty = ?
+        WHERE supplier_id = ?`, 
+        [supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty, supplier_id], 
+        (err, result) => {
+            if (err) return res.status(500).json({ message: 'Error updating supplier', error: err });
+            res.json({ message: 'Supplier updated successfully' });
+        }
+    );
+});
+
+// Delete Supplier
+router.delete('/suppliers/:supplier_id', checkLogin, (req, res) => {
+    const supplier_id = req.params.supplier_id;
+    db.query('DELETE FROM suppliers WHERE supplier_id = ?', [supplier_id], (err, result) => {
+        if (err) return res.status(500).json({ message: 'Error deleting supplier', error: err });
+        res.json({ message: 'Supplier deleted successfully' });
     });
 });
 
-// Handle Supplier Update and Delete Actions
-router.post('/supplier/action', checkLogin, (req, res) => {
-    const { action, supplier_id, supplier_name, supplier_email, supplier_phone, supplier_location } = req.body;
-
-    if (!action || !supplier_id) {
-        return res.status(400).json({ message: 'Action and Supplier ID are required.' });
-    }
-
-    if (action === 'delete') {
-        db.query(`DELETE FROM suppliers WHERE supplier_id = ?`, [supplier_id], (err, result) => {
-            if (err) return res.status(500).json({ message: 'Error deleting supplier', error: err });
-            
-            res.json({ success: true, message: 'Supplier deleted successfully' });
-        });
-    } else if (action === 'update') {
-        if (!supplier_name || !supplier_email || !supplier_phone || !supplier_location) {
-            return res.status(400).json({ message: 'All supplier fields are required to update.' });
-        }
-
-        db.query(`
-            UPDATE suppliers 
-            SET supplier_name = ?, supplier_email = ?, supplier_phone = ?, supplier_location = ?
-            WHERE supplier_id = ?`, 
-            [supplier_name, supplier_email, supplier_phone, supplier_location, supplier_id], (err, result) => {
-            
-            if (err) return res.status(500).json({ message: 'Error updating supplier', error: err });
-            
-            res.json({ success: true, message: 'Supplier updated successfully' });
-        });
-    } else {
-        res.status(400).json({ message: 'Invalid action' });
-    }
-});
-
 // Generate PDF for Supplier
-router.get('/supplier/pdf/:supplier_id', checkLogin, (req, res) => {
+router.get('/suppliers/pdf/:supplier_id', checkLogin, (req, res) => {
     const supplier_id = req.params.supplier_id;
 
-    db.query(`SELECT * FROM suppliers WHERE supplier_id = ?`, [supplier_id], (err, supplier) => {
+    db.query('SELECT * FROM suppliers WHERE supplier_id = ?', [supplier_id], (err, supplier) => {
         if (err) return res.status(500).json({ message: 'Error fetching supplier details', error: err });
-        
         if (!supplier || supplier.length === 0) {
             return res.status(404).json({ message: 'Supplier not found' });
         }

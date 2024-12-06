@@ -1,4 +1,3 @@
-// routes/salesRoute.js
 const express = require('express');
 const pool = require('../models/db'); // Import the database connection
 const PDFDocument = require('pdfkit');
@@ -15,6 +14,15 @@ function validateSession(req, res, next) {
     }
     next();
 }
+
+// Serve static pages (HTML files) from the 'public' directory
+router.get('/add-sale', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/page-add-sale.html'));
+});
+
+router.get('/list-sale', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/page-list-sale.html'));
+});
 
 // POST: Record a sale
 router.post('/', validateSession, async (req, res) => {

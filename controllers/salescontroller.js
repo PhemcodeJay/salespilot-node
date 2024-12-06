@@ -1,5 +1,4 @@
 const express = require('express');
-const session = require('express-session');
 const { Sequelize, DataTypes } = require('sequelize');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
@@ -12,20 +11,7 @@ const sequelize = new Sequelize('salespilot', 'root', '', {
     dialect: 'mysql',
 });
 
-// MySQL connection setup
-const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-});
-
 // Models
-const Users = sequelize.define('Users', {
-    username: { type: DataTypes.STRING, allowNull: false },
-    email: { type: DataTypes.STRING },
-    date: { type: DataTypes.DATE },
-});
 const Sales = sequelize.define('Sales', {
     productId: { type: DataTypes.INTEGER },
     name: { type: DataTypes.STRING },
@@ -36,66 +22,27 @@ const Sales = sequelize.define('Sales', {
     paymentStatus: { type: DataTypes.STRING },
     saleDate: { type: DataTypes.DATE, defaultValue: Sequelize.NOW }, // Add saleDate field
 });
+
 const Products = sequelize.define('Products', {
     name: { type: DataTypes.STRING },
     imagePath: { type: DataTypes.STRING },
 });
-const Inventory = sequelize.define('Inventory', {
-    productId: { type: DataTypes.INTEGER },
-    productName: { type: DataTypes.STRING },
-    availableStock: { type: DataTypes.INTEGER },
-    inventoryQty: { type: DataTypes.INTEGER },
-    salesQty: { type: DataTypes.INTEGER },
-});
 
-// Define Staff and Customers models (assuming the missing models)
 const Staffs = sequelize.define('Staffs', {
     staffName: { type: DataTypes.STRING },
 });
+
 const Customers = sequelize.define('Customers', {
     customerName: { type: DataTypes.STRING },
 });
 
-// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(session({
-    secret: 'your-secret-key',
-    resave: false,
-    saveUninitialized: true,
-    cookie: {
-        maxAge: 86400 * 1000,
-        secure: true,
-        httpOnly: true,
-    },
-}));
 
-// Session Validation Middleware
-function validateSession(req, res, next) {
-    if (!req.session.username) {
-        return res.status(401).json({ error: 'User not logged in.' });
-    }
-    next();
-}
+// CRUD Operations for Sales
 
-// Routes
-app.get('/user', validateSession, async (req, res) => {
-    try {
-        const user = await Users.findOne({ where: { username: req.session.username } });
-        if (!user) {
-            return res.status(404).json({ error: 'User not found.' });
-        }
-        res.json({
-            username: user.username,
-            email: user.email,
-            date: user.date,
-        });
-    } catch (err) {
-        res.status(500).json({ error: 'Database error.', details: err.message });
-    }
-});
-
-app.post('/sales', validateSession, async (req, res) => {
+// Create Sale
+app.post('/sales', async (req, res) => {
     const {
         name, saleStatus, salesPrice, totalPrice, salesQty,
         paymentStatus, saleNote, staffName, customerName,
@@ -134,32 +81,69 @@ app.post('/sales', validateSession, async (req, res) => {
     }
 });
 
-app.get('/inventory-notifications', validateSession, async (req, res) => {
+// Read All Sales
+app.get('/sales', async (req, res) => {
     try {
-        const lowStockThreshold = 10;
-        const highStockThreshold = 1000;
-
-        const inventoryNotifications = await Inventory.findAll({
-            include: [{
-                model: Products,
-                attributes: ['imagePath'],
-            }],
-            where: {
-                [Sequelize.Op.or]: [
-                    { availableStock: { [Sequelize.Op.lt]: lowStockThreshold } },
-                    { availableStock: { [Sequelize.Op.gt]: highStockThreshold } },
-                ],
-            },
-            order: [['lastUpdated', 'DESC']],
-        });
-
-        res.json(inventoryNotifications);
+        const sales = await Sales.findAll();
+        res.status(200).json(sales);
     } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch inventory notifications.', details: err.message });
+        res.status(500).json({ error: 'Failed to fetch sales.', details: err.message });
     }
 });
 
-app.post('/sales/:id/pdf', validateSession, async (req, res) => {
+// Read Single Sale
+app.get('/sales/:id', async (req, res) => {
+    try {
+        const sale = await Sales.findByPk(req.params.id);
+        if (!sale) {
+            return res.status(404).json({ error: 'Sale not found.' });
+        }
+        res.status(200).json(sale);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch sale.', details: err.message });
+    }
+});
+
+// Update Sale
+app.put('/sales/:id', async (req, res) => {
+    const { saleStatus, salesPrice, totalPrice, salesQty, paymentStatus } = req.body;
+
+    try {
+        const sale = await Sales.findByPk(req.params.id);
+        if (!sale) {
+            return res.status(404).json({ error: 'Sale not found.' });
+        }
+
+        sale.saleStatus = saleStatus || sale.saleStatus;
+        sale.salesPrice = salesPrice || sale.salesPrice;
+        sale.totalPrice = totalPrice || sale.totalPrice;
+        sale.salesQty = salesQty || sale.salesQty;
+        sale.paymentStatus = paymentStatus || sale.paymentStatus;
+
+        await sale.save();
+        res.status(200).json({ message: 'Sale updated successfully.', sale });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to update sale.', details: err.message });
+    }
+});
+
+// Delete Sale
+app.delete('/sales/:id', async (req, res) => {
+    try {
+        const sale = await Sales.findByPk(req.params.id);
+        if (!sale) {
+            return res.status(404).json({ error: 'Sale not found.' });
+        }
+
+        await sale.destroy();
+        res.status(200).json({ message: 'Sale deleted successfully.' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete sale.', details: err.message });
+    }
+});
+
+// Generate PDF for Sale
+app.post('/sales/:id/pdf', async (req, res) => {
     const saleId = req.params.id;
 
     try {
@@ -179,6 +163,8 @@ app.post('/sales/:id/pdf', validateSession, async (req, res) => {
         pdf.text(`Product Name: ${sale.name}`);
         pdf.text(`Total Price: ${sale.totalPrice}`);
         pdf.text(`Sales Price: ${sale.salesPrice}`);
+        pdf.text(`Sales Quantity: ${sale.salesQty}`);
+        pdf.text(`Payment Status: ${sale.paymentStatus}`);
         pdf.end();
 
         res.download(pdfPath, `sale_${saleId}.pdf`, () => {

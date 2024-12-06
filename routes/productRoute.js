@@ -2,15 +2,26 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 // Middleware for file uploads
 const upload = multer({
     dest: 'uploads/products/', // Directory to store uploaded files
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max file size
+    fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        if (['.jpg', '.jpeg', '.png', '.gif'].includes(ext)) {
+            return cb(null, true);
+        }
+        cb(new Error('Invalid file type. Only images are allowed.'));
+    }
 });
 
 // Helper function to sanitize user input
 const sanitizeInput = (input) => input?.trim()?.replace(/[<>"]/g, '');
+
+// Serve static files from the 'public' directory
+router.use(express.static(path.join(__dirname, 'public')));
 
 // List all products
 router.get('/products', async (req, res) => {
@@ -18,7 +29,7 @@ router.get('/products', async (req, res) => {
         const products = await db.query(
             'SELECT id, name, description, price, image_path, category, inventory_qty, cost FROM products'
         );
-        res.render('listProduct', { products }); // Render list of products to 'listProduct' page
+        res.sendFile(path.join(__dirname, 'public', 'page-list-products.html')); // Serve 'page-list-products.html' static file
     } catch (error) {
         console.error(error);
         res.status(500).json({ success: false, message: "Server error." });
@@ -29,7 +40,7 @@ router.get('/products', async (req, res) => {
 router.get('/product/add', async (req, res) => {
     try {
         const categories = await db.query('SELECT category_id, category_name FROM categories');
-        res.render('addProduct', { categories }); // Render the add product form with category options
+        res.sendFile(path.join(__dirname, 'public', 'page-add-products.html')); // Serve 'page-add-products.html' static file
     } catch (error) {
         console.error(error);
         res.status(500).json({ success: false, message: "Server error." });
@@ -73,6 +84,7 @@ router.post('/product/add', upload.single('pic'), async (req, res) => {
         let imagePath = null;
         if (req.file) {
             imagePath = path.join(req.file.destination, req.file.filename);
+            ensureDirectoryExistence(imagePath); // Ensure directory exists before saving
         }
 
         // Check if product exists
@@ -83,7 +95,7 @@ router.post('/product/add', upload.single('pic'), async (req, res) => {
             await db.query(
                 `UPDATE products 
                  SET staff_name = ?, category_id = ?, cost = ?, price = ?, stock_qty = ?, 
-                     supply_qty = ?, description = ?, image_path = ?
+                     supply_qty = ?, description = ?, image_path = ? 
                  WHERE id = ?`,
                 [
                     sanitizedData.staff_name,
@@ -123,5 +135,14 @@ router.post('/product/add', upload.single('pic'), async (req, res) => {
         res.status(500).json({ success: false, message: "Server error." });
     }
 });
+
+// Helper function to ensure directory existence before saving the image
+const ensureDirectoryExistence = (filePath) => {
+    const dirname = path.dirname(filePath);
+    if (fs.existsSync(dirname)) {
+        return true;
+    }
+    fs.mkdirSync(dirname, { recursive: true });
+};
 
 module.exports = router;

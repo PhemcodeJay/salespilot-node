@@ -1,5 +1,6 @@
 const mysql = require('mysql2');
 const moment = require('moment');
+const jwt = require('jsonwebtoken');  // Import jwt for token verification
 
 // MySQL connection pool setup
 const pool = mysql.createPool({
@@ -15,24 +16,24 @@ const pool = mysql.createPool({
 // JWT token verification function
 const verifyToken = (token) => {
   try {
-      return jwt.verify(token, process.env.JWT_SECRET);
+    return jwt.verify(token, process.env.JWT_SECRET);
   } catch (err) {
-      return null;
+    return null;
   }
 };
 
-// Fetch user details by token
+// Fetch user details by username
 const fetchUserInfo = (username) => {
   return new Promise((resolve, reject) => {
-      pool.query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username], (err, results) => {
-          if (err) return reject("Error fetching user info");
-          if (results.length === 0) return reject("User not found.");
-          resolve(results[0]);
-      });
+    pool.query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username], (err, results) => {
+      if (err) return reject("Error fetching user info");
+      if (results.length === 0) return reject("User not found.");
+      resolve(results[0]);
+    });
   });
 };
 
-// Helper function to execute queries
+// Helper function to execute queries using the pool
 const executeQuery = (query, params) => {
   return new Promise((resolve, reject) => {
     pool.execute(query, params, (err, results) => {

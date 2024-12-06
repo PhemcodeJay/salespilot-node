@@ -20,6 +20,15 @@ const checkLogin = (req, res, next) => {
     next();
 };
 
+// Serve static pages for supplier list and add supplier
+router.get('/page-list-supplier', checkLogin, (req, res) => {
+    res.sendFile('page-list-supplier.html', { root: './public' });
+});
+
+router.get('/page-add-supplier', checkLogin, (req, res) => {
+    res.sendFile('page-add-supplier.html', { root: './public' });
+});
+
 // Handle Supplier Insert
 router.post('/supplier', checkLogin, (req, res) => {
     const { supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty } = req.body;
@@ -86,20 +95,20 @@ router.get('/supplier/pdf/:supplier_id', checkLogin, (req, res) => {
 
         const supplierData = supplier[0];
         const pdf = new pdfkit();
+        res.setHeader('Content-Type', 'application/pdf');
+        pdf.pipe(res);
+        
         pdf.addPage();
         pdf.setFont('Arial', 'B', 16);
-        pdf.cell(40, 10, 'Supplier Details');
-        pdf.ln();
-        pdf.setFont('Arial', '', 12);
-        pdf.cell(40, 10, `Name: ${supplierData.supplier_name}`);
-        pdf.ln();
-        pdf.cell(40, 10, `Email: ${supplierData.supplier_email}`);
-        pdf.ln();
-        pdf.cell(40, 10, `Phone: ${supplierData.supplier_phone}`);
-        pdf.ln();
-        pdf.cell(40, 10, `Location: ${supplierData.supplier_location}`);
+        pdf.text('Supplier Details', 100, 100);
         
-        pdf.output('D', `supplier_${supplier_id}.pdf`);
+        pdf.setFont('Arial', '', 12);
+        pdf.text(`Name: ${supplierData.supplier_name}`, 100, 130);
+        pdf.text(`Email: ${supplierData.supplier_email}`, 100, 150);
+        pdf.text(`Phone: ${supplierData.supplier_phone}`, 100, 170);
+        pdf.text(`Location: ${supplierData.supplier_location}`, 100, 190);
+        
+        pdf.end();
     });
 });
 

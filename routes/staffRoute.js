@@ -2,6 +2,7 @@ const express = require('express');
 const mysql = require('mysql2');
 const PDFDocument = require('pdfkit');
 const router = express.Router();
+const path = require('path');
 
 // MySQL connection setup
 const db = mysql.createConnection({
@@ -19,8 +20,11 @@ function checkSession(req, res, next) {
     next();
 }
 
+// Serve static pages from 'public' directory
+router.use(express.static(path.join(__dirname, 'public')));
+
 // Handle POST form actions: Add or update staff, or delete staff
-router.post('/', checkSession, (req, res) => {
+router.post('/staff', checkSession, (req, res) => {
     const { staff_name, staff_email, staff_phone, position, action, staff_id } = req.body;
 
     if (action === 'update' || action === 'insert') {
@@ -32,18 +36,18 @@ router.post('/', checkSession, (req, res) => {
             ? [staff_name, staff_email, staff_phone, position, staff_id] 
             : [staff_name, staff_email, staff_phone, position];
 
-        connection.execute(query, params, (err, result) => {
+        db.execute(query, params, (err, result) => {
             if (err) return res.status(500).send(err.message);
-            res.redirect('/page-list-staffs');
+            res.redirect('/page-list-staffs.html');
         });
     }
 
     // Handle delete action
     if (action === 'delete') {
         if (!staff_id) return res.status(400).send('Staff ID is required for deletion.');
-        
+
         const deleteQuery = "DELETE FROM staffs WHERE staff_id = ?";
-        connection.execute(deleteQuery, [staff_id], (err, result) => {
+        db.execute(deleteQuery, [staff_id], (err, result) => {
             if (err) return res.status(500).send(err.message);
             res.json({ success: 'Staff deleted' });
         });
@@ -59,7 +63,7 @@ router.post('/generate-pdf', checkSession, (req, res) => {
     }
 
     const query = "SELECT * FROM staffs WHERE staff_id = ?";
-    connection.execute(query, [staff_id], (err, staff) => {
+    db.execute(query, [staff_id], (err, staff) => {
         if (err) return res.status(500).send(err.message);
         if (!staff.length) return res.status(404).send('Staff not found.');
 
@@ -76,6 +80,16 @@ router.post('/generate-pdf', checkSession, (req, res) => {
         
         doc.end();
     });
+});
+
+// Route for the add staff page
+router.get('/page-add-staffs', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'page-add-staffs.html'));
+});
+
+// Route for the list staff page
+router.get('/page-list-staffs', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'page-list-staffs.html'));
 });
 
 module.exports = router;
