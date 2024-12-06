@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const PDFDocument = require('pdfkit');
 const { pool } = require('./db'); // Assuming pool is already configured in db.js
 
+
 // Generate PDF report of all Products
 const generateProductsPdf = async (req, res) => {
     try {

@@ -15,7 +15,6 @@ const pool = mysql.createPool({
 // Promisify the pool for async/await usage
 const db = pool.promise();
 
-
 /**
  * Product Model
  */
@@ -77,43 +76,43 @@ class Sales {
   }
 
   static async getById(salesId) {
-    const [rows] = await db.query('SELECT * FROM sales WHERE sales_id = ?', [salesId]);
+    const [rows] = await db.query('SELECT * FROM sales WHERE id = ?', [salesId]);
     if (rows.length === 0) throw new Error('Sale not found');
     return rows[0];
   }
 
   static async create(sale) {
     const {
-      product_id, user_id, customer_id, staff_id, sales_qty, sale_status, payment_status, name, product_type, sale_note, sales_price,
+      product_id, staff_id, customer_id, sales_qty, sale_status, payment_status, name, product_type, sale_note, sales_price,
     } = sale;
 
     const [result] = await db.query(
       `INSERT INTO sales 
-      (product_id, user_id, customer_id, staff_id, sales_qty, sale_status, payment_status, name, product_type, sale_note, sales_price)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [product_id, user_id, customer_id, staff_id, sales_qty, sale_status, payment_status, name, product_type, sale_note, sales_price]
+      (product_id, staff_id, customer_id, sales_qty, sale_status, payment_status, name, product_type, sale_note, sales_price)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [product_id, staff_id, customer_id, sales_qty, sale_status, payment_status, name, product_type, sale_note, sales_price]
     );
 
-    return { sales_id: result.insertId };
+    return { id: result.insertId };
   }
 
   static async update(salesId, sale) {
     const {
-      product_id, user_id, customer_id, staff_id, sales_qty, sale_status, payment_status, name, product_type, sale_note, sales_price,
+      product_id, staff_id, customer_id, sales_qty, sale_status, payment_status, name, product_type, sale_note, sales_price,
     } = sale;
 
     const [result] = await db.query(
       `UPDATE sales 
-      SET product_id = ?, user_id = ?, customer_id = ?, staff_id = ?, sales_qty = ?, sale_status = ?, payment_status = ?, 
-      name = ?, product_type = ?, sale_note = ?, sales_price = ? WHERE sales_id = ?`,
-      [product_id, user_id, customer_id, staff_id, sales_qty, sale_status, payment_status, name, product_type, sale_note, sales_price, salesId]
+      SET product_id = ?, staff_id = ?, customer_id = ?, sales_qty = ?, sale_status = ?, payment_status = ?, 
+      name = ?, product_type = ?, sale_note = ?, sales_price = ? WHERE id = ?`,
+      [product_id, staff_id, customer_id, sales_qty, sale_status, payment_status, name, product_type, sale_note, sales_price, salesId]
     );
 
     return result;
   }
 
   static async delete(salesId) {
-    const [result] = await db.query('DELETE FROM sales WHERE sales_id = ?', [salesId]);
+    const [result] = await db.query('DELETE FROM sales WHERE id = ?', [salesId]);
     return result;
   }
 }
@@ -128,7 +127,7 @@ class Inventory {
   }
 
   static async getById(inventoryId) {
-    const [rows] = await db.query('SELECT * FROM inventory WHERE inventory_id = ?', [inventoryId]);
+    const [rows] = await db.query('SELECT * FROM inventory WHERE id = ?', [inventoryId]);
     if (rows.length === 0) throw new Error('Inventory not found');
     return rows[0];
   }
@@ -152,7 +151,7 @@ class Inventory {
     const [result] = await db.query(
       `UPDATE inventory 
       SET product_id = ?, sales_qty = ?, stock_qty = ?, supply_qty = ?, product_name = ? 
-      WHERE inventory_id = ?`,
+      WHERE id = ?`,
       [product_id, sales_qty, stock_qty, supply_qty, product_name, inventoryId]
     );
 
@@ -160,7 +159,7 @@ class Inventory {
   }
 
   static async delete(inventoryId) {
-    const [result] = await db.query('DELETE FROM inventory WHERE inventory_id = ?', [inventoryId]);
+    const [result] = await db.query('DELETE FROM inventory WHERE id = ?', [inventoryId]);
     return result;
   }
 }
