@@ -10,8 +10,9 @@ const connection = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'your_database_name'
+  database: 'dbs13455438'
 });
+
 
 // Route to handle premium content access control
 router.get('/premium-content', (req, res) => {
