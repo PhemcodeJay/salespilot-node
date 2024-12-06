@@ -1,7 +1,8 @@
+// expenseRoute.js
 const express = require('express');
 const path = require('path');
-const expenseController = require('./controllers/expenseController');  // Adjust path if necessary
-const verifyToken = require('../middleware/verifyToken');  // Assuming you have a middleware to verify JWT
+const expenseController = require('../controllers/expensecontroller');  // Adjust path if necessary
+const verifyToken = require('../verifyToken');  // Import the verifyToken function
 
 const router = express.Router();
 
@@ -10,15 +11,15 @@ router.use(express.static(path.join(__dirname, '../public')));
 
 // Serve the 'page-add-expenses.html' page to add an expense
 router.get('/add-expense', verifyToken, (req, res) => {
-    const filePath = path.join(__dirname, '..', 'public', 'page-add-expenses.html'); // Adjust path as needed
+    const filePath = path.join(__dirname, '..', 'public', 'page-add-expenses.html');
     res.sendFile(filePath);
 });
 
 // Serve the 'page-list-expenses.html' page to list all expenses
 router.get('/list-expenses', verifyToken, async (req, res) => {
     try {
-        const expenses = await expenseController.getAllExpenses(req, res); // Fetch all expenses
-        res.render('page-list-expenses', { expenses }); // Render with data (ensure you have a template engine like EJS or Pug set up)
+        const expenses = await expenseController.getAllExpenses(req, res);
+        res.render('page-list-expenses', { expenses });
     } catch (err) {
         console.error("Error fetching expenses: ", err);
         res.status(500).json({ message: 'Error fetching expenses' });
@@ -42,7 +43,7 @@ router.get('/expenses/pdf', verifyToken, expenseController.generateExpensesPdf);
 router.get('/expenses', verifyToken, async (req, res) => {
     try {
         const expenses = await expenseController.getAllExpenses(req, res);
-        res.json(expenses); // Return as JSON if you want to use the data in a frontend
+        res.json(expenses);
     } catch (err) {
         console.error("Error fetching expenses: ", err);
         res.status(500).json({ message: 'Error fetching expenses' });

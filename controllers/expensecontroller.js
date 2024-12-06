@@ -1,10 +1,11 @@
-const mysql = require('mysql');
+const mysql = require('mysql2'); // Assuming you're using mysql2 for database connection
 const jwt = require('jsonwebtoken');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
+const verifyToken = require('../verifyToken');
 
-// MySQL connection pool setup
+// Create a connection pool to the database
 const pool = mysql.createPool({
     host: 'localhost',
     user: 'root',
@@ -15,17 +16,12 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
+// Export the pool for use in other files
+module.exports = pool;
+
 // Use the pool for queries
 const db = pool; 
 
-// JWT token verification function
-const verifyToken = (token) => {
-    try {
-        return jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-        return null;
-    }
-};
 
 // Fetch user details by token
 const fetchUserInfo = (username) => {

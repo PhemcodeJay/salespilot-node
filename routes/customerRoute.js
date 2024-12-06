@@ -3,7 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const router = express.Router();
 const customerController = require('../controllers/customercontroller');
-const verifyToken = require('../middleware/verifyToken');
+const verifyToken = require('../verifyToken');
+
 
 // Serve static files (CSS, JS, images, etc.)
 router.use(express.static(path.join(__dirname, '../public')));
