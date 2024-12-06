@@ -1,4 +1,5 @@
-const db = require('../config/db'); // MySQL connection pool setup
+const mysql = require('mysql');
+const jwt = require('jsonwebtoken');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
@@ -6,20 +7,17 @@ const path = require('path');
 // MySQL connection pool setup
 const pool = mysql.createPool({
     host: 'localhost',
-    user: 'root', // Replace with actual DB username
-    password: '', // Replace with actual DB password
+    user: 'root',
+    password: '',
     database: 'dbs13455438',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 });
-// MySQL connection setup
-const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-});
+
+// Use the pool for queries
+const db = pool; 
+
 // JWT token verification function
 const verifyToken = (token) => {
     try {
@@ -32,7 +30,7 @@ const verifyToken = (token) => {
 // Fetch user details by token
 const fetchUserInfo = (username) => {
     return new Promise((resolve, reject) => {
-        pool.query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username], (err, results) => {
+        db.query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username], (err, results) => {
             if (err) return reject("Error fetching user info");
             if (results.length === 0) return reject("User not found.");
             resolve(results[0]);
@@ -148,11 +146,17 @@ const generateExpensesPdf = async (req, res) => {
             return res.status(404).json({ message: 'No expenses found' });
         }
 
+        // Create the reports directory if it doesn't exist
+        const reportsDir = path.join(__dirname, '..', 'reports');
+        if (!fs.existsSync(reportsDir)) {
+            fs.mkdirSync(reportsDir);
+        }
+
         // Create a new PDF document
         const doc = new PDFDocument();
         
         // Set the file name and path
-        const filePath = path.join(__dirname, '..', 'reports', `expenses_report_${Date.now()}.pdf`);
+        const filePath = path.join(reportsDir, `expenses_report_${Date.now()}.pdf`);
 
         // Pipe the document to a file
         doc.pipe(fs.createWriteStream(filePath));

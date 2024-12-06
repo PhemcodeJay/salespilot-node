@@ -1,63 +1,76 @@
 const express = require('express');
-const path = require('path'); // Add this to handle path resolution
-const fs = require('fs'); // Required for handling file system operations
+const path = require('path');
+const fs = require('fs');
 const router = express.Router();
-const customerController = require('./controllers/customerController'); // Import the customer controller
-const verifyToken = require('../middleware/verifyToken'); // Middleware to verify JWT
+const customerController = require('./controllers/customerController');
+const verifyToken = require('../middleware/verifyToken');
 
-// Serve static files (CSS, JS, images, etc.) from the 'public' folder
+// Serve static files (CSS, JS, images, etc.)
 router.use(express.static(path.join(__dirname, '../public')));
 
-// Serve the 'page-add-customer.html' page to add a customer
+// Route to serve the page for adding a customer
 router.get('/add-customer', verifyToken, (req, res) => {
-    const filePath = path.join(__dirname, '..', 'public', 'page-add-customer.html'); // Adjust path as needed
-    res.sendFile(filePath);
+    try {
+        const filePath = path.join(__dirname, '..', 'public', 'page-add-customer.html');
+        res.sendFile(filePath);
+    } catch (err) {
+        console.error("Error serving add-customer page:", err);
+        res.status(500).json({ message: 'Error loading the page' });
+    }
 });
 
-// Serve the 'page-list-customer.html' page to list all customers
+// Route to serve the page listing all customers
 router.get('/list-customer', verifyToken, async (req, res) => {
     try {
-        const customers = await customerController.fetchAllCustomers(); // Using the fetchAllCustomers method
-        res.render('page-list-customer', { customers }); // This assumes you're using a view engine like EJS, Pug, etc.
+        const customers = await customerController.fetchAllCustomers();
+        res.render('page-list-customer', { customers });
     } catch (err) {
-        console.error("Error fetching customers: ", err);
+        console.error("Error fetching customers:", err);
         res.status(500).json({ message: 'Error fetching customers' });
     }
 });
 
-// Handle customer actions (CRUD operations)
-router.post('/customer/actions', verifyToken, customerController.handleCustomerActions);
+// Route to handle customer actions (CRUD operations)
+router.post('/customer/actions', verifyToken, async (req, res) => {
+    try {
+        await customerController.handleCustomerActions(req, res);
+    } catch (err) {
+        console.error("Error handling customer action:", err);
+        res.status(500).json({ message: 'Error processing request' });
+    }
+});
 
-// Export customer details to PDF
+// Route to export customer details to PDF
 router.get('/customer/pdf/:customer_id', verifyToken, async (req, res) => {
     const { customer_id } = req.params;
 
     try {
-        // Call the controller method to export customer data to PDF
         const doc = await customerController.exportCustomerToPDF(customer_id);
-        const filePath = path.join(__dirname, '..', 'temp', `customer_${customer_id}.pdf`); // Path to save the PDF
+        const filePath = path.join(__dirname, '..', 'temp', `customer_${customer_id}.pdf`);
 
-        // Pipe the PDF content to a temporary file
         doc.pipe(fs.createWriteStream(filePath));
 
-        // Once the file is written, send it as a downloadable response
         doc.on('finish', () => {
             res.download(filePath, `customer_${customer_id}.pdf`, (err) => {
                 if (err) {
                     console.error('Error sending file:', err);
                     return res.status(500).json({ message: 'Error exporting PDF' });
                 }
-                // Clean up the temporary file after sending it
-                fs.unlinkSync(filePath);
+                fs.unlinkSync(filePath); // Clean up temp file
             });
         });
 
-        // Finalize the PDF document
         doc.end();
     } catch (err) {
-        console.error("Error exporting PDF: ", err);
+        console.error("Error exporting PDF:", err);
         res.status(500).json({ message: 'Error exporting PDF' });
     }
+});
+
+// Centralized Error Handling Middleware
+router.use((err, req, res, next) => {
+    console.error("Unhandled error:", err);
+    res.status(500).json({ message: 'Internal server error', error: err.message });
 });
 
 // Export the router for use in the main app file

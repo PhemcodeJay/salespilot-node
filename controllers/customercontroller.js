@@ -1,6 +1,8 @@
 const mysql = require('mysql2');
 const jwt = require('jsonwebtoken');
 const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
 
 // MySQL connection pool setup
 const pool = mysql.createPool({
@@ -80,6 +82,52 @@ const exportCustomerToPDF = async (customer_id) => {
     doc.end();
 
     return doc;
+};
+
+// Generate PDF report of all customers
+const generatecustomersPdf = async (req, res) => {
+    try {
+        // Fetch all customers
+        const customers = await query('SELECT customer_id, customer_name, customer_email, customer_phone, customer_location FROM customers ORDER BY customer_name DESC');
+
+        if (customers.length === 0) {
+            return res.status(404).json({ message: 'No customers found' });
+        }
+
+        // Create a new PDF document
+        const doc = new PDFDocument();
+        
+        // Set the file name and path
+        const filePath = path.join(__dirname, '..', 'reports', `customers_report_${Date.now()}.pdf`);
+
+        // Pipe the document to a file
+        doc.pipe(fs.createWriteStream(filePath));
+
+        // Title and headers
+        doc.fontSize(18).text('Customer Report', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(12).text(`Date Generated: ${new Date().toLocaleString()}`, { align: 'center' });
+        doc.moveDown();
+        
+        doc.text('--------------------------------------', { align: 'center' });
+        doc.moveDown();
+        
+        doc.text('Customer ID | Name | Email | Phone | Location');
+        doc.text('--------------------------------------');
+        
+        // Add customers data to the PDF
+        customers.forEach(customer => {
+            doc.text(`${customer.customer_id} | ${customer.customer_name} | ${customer.customer_email} | ${customer.customer_phone} | ${customer.customer_location}`);
+        });
+
+        // End and save the PDF document
+        doc.end();
+
+        // Send the response with the file path or download option
+        res.status(200).json({ message: 'PDF report generated successfully', filePath: filePath });
+    } catch (err) {
+        return res.status(500).json({ message: 'Error generating PDF', error: err.message });
+    }
 };
 
 // Customer Controller (CRUD operations)
