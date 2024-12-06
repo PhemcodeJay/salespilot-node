@@ -43,7 +43,60 @@ const fetchAllCustomers = () => {
     });
 };
 
-// Customer Controller
+// Add a new customer
+const addCustomer = (customer_name, customer_email, customer_phone, customer_location) => {
+    return new Promise((resolve, reject) => {
+        pool.query('INSERT INTO customers (customer_name, customer_email, customer_phone, customer_location) VALUES (?, ?, ?, ?)', 
+        [customer_name, customer_email, customer_phone, customer_location], (err, results) => {
+            if (err) return reject("Error adding customer");
+            resolve({ id: results.insertId });
+        });
+    });
+};
+
+// Update an existing customer
+const updateCustomer = (customer_id, customer_name, customer_email, customer_phone, customer_location) => {
+    return new Promise((resolve, reject) => {
+        pool.query('UPDATE customers SET customer_name = ?, customer_email = ?, customer_phone = ?, customer_location = ? WHERE customer_id = ?',
+        [customer_name, customer_email, customer_phone, customer_location, customer_id], (err) => {
+            if (err) return reject("Error updating customer");
+            resolve({ message: "Customer updated successfully" });
+        });
+    });
+};
+
+// Delete a customer
+const deleteCustomer = (customer_id) => {
+    return new Promise((resolve, reject) => {
+        pool.query('DELETE FROM customers WHERE customer_id = ?', [customer_id], (err) => {
+            if (err) return reject("Error deleting customer");
+            resolve({ message: "Customer deleted successfully" });
+        });
+    });
+};
+
+// Export customer details as PDF
+const exportCustomerToPDF = (customer_id) => {
+    return new Promise((resolve, reject) => {
+        pool.query('SELECT * FROM customers WHERE customer_id = ?', [customer_id], (err, results) => {
+            if (err) return reject("Error fetching customer for PDF");
+            if (results.length === 0) return reject("Customer not found");
+
+            const customer = results[0];
+            const doc = new PDFDocument();
+            doc.fontSize(12).text(`Customer Details`, 100, 100);
+            doc.text(`Name: ${customer.customer_name}`);
+            doc.text(`Email: ${customer.customer_email}`);
+            doc.text(`Phone: ${customer.customer_phone}`);
+            doc.text(`Location: ${customer.customer_location}`);
+            doc.end();
+
+            resolve(doc);
+        });
+    });
+};
+
+// Customer Controller (CRUD operations)
 exports.customerController = async (req, res) => {
     try {
         const token = req.cookies['auth_token'];
@@ -77,50 +130,30 @@ exports.handleCustomerActions = async (req, res) => {
     try {
         const { action, customer_id, customer_name, customer_email, customer_phone, customer_location } = req.body;
 
-        if (action === 'delete') {
-            pool.query('DELETE FROM customers WHERE customer_id = ?', [customer_id], (err) => {
-                if (err) {
-                    console.error("Error deleting customer: ", err);
-                    return res.status(500).json({ message: 'Error deleting customer' });
-                }
-                return res.redirect('/customers');
-            });
+        // Add new customer
+        if (action === 'add') {
+            const customer = await addCustomer(customer_name, customer_email, customer_phone, customer_location);
+            res.redirect('/customers');
         }
 
-        if (action === 'save_pdf') {
-            pool.query('SELECT * FROM customers WHERE customer_id = ?', [customer_id], (err, results) => {
-                if (err) {
-                    console.error("Error fetching customer: ", err);
-                    return res.status(500).json({ message: 'Error fetching customer' });
-                }
-
-                if (results.length === 0) {
-                    return res.status(404).json({ message: 'Customer not found.' });
-                }
-
-                const customer = results[0];
-                const doc = new PDFDocument();
-                doc.fontSize(12).text(`Customer Details`, 100, 100);
-                doc.text(`Name: ${customer.customer_name}`);
-                doc.text(`Email: ${customer.customer_email}`);
-                doc.text(`Phone: ${customer.customer_phone}`);
-                doc.text(`Location: ${customer.customer_location}`);
-                doc.end();
-                res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', `attachment; filename=customer_${customer_id}.pdf`);
-                doc.pipe(res);
-            });
-        }
-
+        // Update existing customer
         if (action === 'update') {
-            pool.query('INSERT INTO customers (customer_id, customer_name, customer_email, customer_phone, customer_location) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE customer_name = ?, customer_email = ?, customer_phone = ?, customer_location = ?',
-                [customer_id, customer_name, customer_email, customer_phone, customer_location, customer_name, customer_email, customer_phone, customer_location], (err) => {
-                    if (err) {
-                        console.error("Error updating customer: ", err);
-                        return res.status(500).json({ message: 'Error updating customer' });
-                    }
-                    return res.redirect('/customers');
-                });
+            await updateCustomer(customer_id, customer_name, customer_email, customer_phone, customer_location);
+            res.redirect('/customers');
+        }
+
+        // Delete customer
+        if (action === 'delete') {
+            await deleteCustomer(customer_id);
+            res.redirect('/customers');
+        }
+
+        // Export customer details as PDF
+        if (action === 'save_pdf') {
+            const doc = await exportCustomerToPDF(customer_id);
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename=customer_${customer_id}.pdf`);
+            doc.pipe(res);
         }
     } catch (err) {
         console.error("Error: ", err);

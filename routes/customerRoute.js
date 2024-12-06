@@ -1,29 +1,29 @@
 const express = require('express');
-const path = require('path');
-const customerController = require('./controllers/customerController'); // Import the customer controller
-
 const router = express.Router();
+const customerController = require('./controllers/customerController');  // Assuming your controller file is named customerController.js
 
-// Serve static files from the 'public' folder
-router.use(express.static(path.join(__dirname, '../public')));
+// Middleware to protect routes (Optional, if using JWT)
+const verifyToken = require('../middleware/verifyToken');
 
-// Serve the page to add a customer
-router.get('/page-add-customers', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/page-add-customers.html'));
-});
+// Get customer dashboard (list all customers)
+router.get('/customers', verifyToken, customerController.customerController);
 
-// Serve the page to list all customers
-router.get('/page-list-customers', async (req, res) => {
+// Handle customer actions (CRUD)
+router.post('/customer/actions', verifyToken, customerController.handleCustomerActions);
+
+// Export customer details to PDF
+router.get('/customer/pdf/:customer_id', verifyToken, async (req, res) => {
+    const { customer_id } = req.params;
     try {
-        const customers = await customerController.fetchAllCustomers(); // Fetch all customers
-        res.render('page-list-customers', { customers }); // Render the list of customers
+        const doc = await customerController.exportCustomerToPDF(customer_id);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=customer_${customer_id}.pdf`);
+        doc.pipe(res);
     } catch (err) {
-        console.error("Error fetching customers: ", err);
-        res.status(500).json({ message: 'Error fetching customers' });
+        console.error("Error exporting PDF: ", err);
+        res.status(500).json({ message: 'Error exporting PDF' });
     }
 });
 
-// Handle customer actions (e.g., save, delete, update, PDF generation)
-router.post('/handle-customer-actions', customerController.handleCustomerActions);
-
+// Exported router for use in main app file
 module.exports = router;
