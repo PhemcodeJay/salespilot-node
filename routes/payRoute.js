@@ -1,44 +1,17 @@
-// Function to render the PayPal button based on the selected plan ID
-function renderPaypalButton(planKey, planId) {
-    if (paypal.Buttons !== undefined) {
-        paypal.Buttons().close();  // Close any previously rendered PayPal button
-    }
+const express = require('express');
+const router = express.Router();
+const paymentController = require('./controllers/payController');
 
-    paypal.Buttons({
-        style: {
-            shape: 'rect',
-            color: 'gold',
-            layout: 'vertical',
-            label: 'subscribe'
-        },
-        createSubscription: function(data, actions) {
-            return actions.subscription.create({
-                plan_id: planId  // Use the selected plan ID
-            });
-        },
-        onApprove: function(data, actions) {
-            alert('Subscription successful! Subscription ID: ' + data.subscriptionID);
-        }
-    }).render('#paypal-button-container-' + planKey);  // Renders the PayPal button inside the specified container
-}
+// Route to check subscription status and process payment
+router.post('/check-subscription', paymentController.checkSubscriptionAndProcessPayment);
 
-// Initialize PayPal button for each plan dynamically
-document.addEventListener('DOMContentLoaded', function () {
-    <?php foreach ($pricingPlans as $planKey => $plan): ?>
-        renderPaypalButton('<?= $planKey ?>', 'P-7E210255TM029860GM5HYC4A'); // Replace with actual plan ID for each plan
-    <?php endforeach; ?>
-});
+// Route to get all payments by user
+router.get('/payments/:user_id', paymentController.getPaymentsByUser);
 
-// Handle modal payment details
-$('.btn').on('click', function () {
-    const currency = $(this).data('currency');
-    const amount = $(this).data('amount');
-    const paymentMethod = $(this).data('payment');
-    const info = $(this).data('info');
+// Route to get a specific payment by ID
+router.get('/payment/:payment_id', paymentController.getPaymentById);
 
-    $('#payment-info').text(info);
-    $('#payment-amount').text(amount);
-    $('#payment-currency').text(currency);
-    $('#hidden-amount').val(amount);
-    $('#hidden-currency').val(currency);
-});
+// Route to update payment status
+router.put('/payment-status/:payment_id', paymentController.updatePaymentStatus);
+
+module.exports = router;

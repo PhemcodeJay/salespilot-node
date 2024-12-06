@@ -12,6 +12,7 @@ class Subscription {
       VALUES (?, ?, ?, ?, ?, ?)
     `;
     
+
     try {
       const [result] = await db.query(query, [userId, 'Free Trial', startDate, endDate, 'Active', true]);
       return { id: result.insertId };
