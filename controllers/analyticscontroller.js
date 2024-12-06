@@ -1,46 +1,103 @@
-const express = require('express');
-const router = express.Router();
-const dayjs = require('dayjs'); // Lightweight date library
-const path = require('path'); // Path module for serving static files
-const reportModel = require('./models/report'); // Import the report model
+const reportModel = require('../models/report'); // Import the report model
+const dayjs = require('dayjs'); // Date library
 
-// Routes for Reports
-router.post('/reports', reportController.createReport); // Create report
-router.get('/reports/:report_id', reportController.getReportById); // Get report by ID
-router.get('/reports', reportController.getAllReports); // Get all reports
-router.put('/reports/:report_id', reportController.updateReport); // Update report
-router.delete('/reports/:report_id', reportController.deleteReport); // Delete report
+// Create a report
+exports.createReport = async (req, res) => {
+  try {
+    const { date, revenue_by_product } = req.body;
+    const reportData = await reportModel.createReport(date, revenue_by_product);
+    res.status(201).json({ message: 'Report created successfully', reportData });
+  } catch (error) {
+    console.error('Error creating report:', error);
+    res.status(500).json({ error: 'Failed to create report' });
+  }
+};
 
-// Serve 'analytics.html' page
-router.get('/analytics', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/analytics.html'));
-});
+// Get report by ID
+exports.getReportById = async (req, res) => {
+  try {
+    const { reports_id } = req.params;
+    const reportData = await reportModel.getReportById(reports_id);
+    if (reportData) {
+      res.json(reportData);
+    } else {
+      res.status(404).json({ error: 'Report not found' });
+    }
+  } catch (error) {
+    console.error('Error fetching report:', error);
+    res.status(500).json({ error: 'Failed to fetch report' });
+  }
+};
 
-// GET route to fetch data for charts
-router.get('/chart-data', async (req, res) => {
+// Get all reports
+exports.getAllReports = async (req, res) => {
+  try {
+    const reportsData = await reportModel.getAllReports();
+    res.json(reportsData);
+  } catch (error) {
+    console.error('Error fetching reports:', error);
+    res.status(500).json({ error: 'Failed to fetch reports' });
+  }
+};
+
+// Update a report
+exports.updateReport = async (req, res) => {
+  try {
+    const { reports_id } = req.params;
+    const { date, revenue_by_product } = req.body;
+    const updatedReport = await reportModel.updateReport(reports_id, date, revenue_by_product);
+    if (updatedReport) {
+      res.json({ message: 'Report updated successfully' });
+    } else {
+      res.status(404).json({ error: 'Report not found' });
+    }
+  } catch (error) {
+    console.error('Error updating report:', error);
+    res.status(500).json({ error: 'Failed to update report' });
+  }
+};
+
+// Delete a report
+exports.deleteReport = async (req, res) => {
+  try {
+    const { reports_id } = req.params;
+    const deletedReport = await reportModel.deleteReport(reports_id);
+    if (deletedReport) {
+      res.json({ message: 'Report deleted successfully' });
+    } else {
+      res.status(404).json({ error: 'Report not found' });
+    }
+  } catch (error) {
+    console.error('Error deleting report:', error);
+    res.status(500).json({ error: 'Failed to delete report' });
+  }
+};
+
+// Chart data route
+exports.getChartData = async (req, res) => {
   try {
     const range = req.query.range || 'yearly';
     let startDate, endDate;
 
-    // Define the date range based on the selected period
-    const today = dayjs();
     switch (range) {
       case 'weekly':
-        startDate = today.startOf('week').format('YYYY-MM-DD');
-        endDate = today.endOf('week').format('YYYY-MM-DD');
+        startDate = dayjs().startOf('week').format('YYYY-MM-DD');
+        endDate = dayjs().endOf('week').format('YYYY-MM-DD');
         break;
       case 'monthly':
-        startDate = today.startOf('month').format('YYYY-MM-DD');
-        endDate = today.endOf('month').format('YYYY-MM-DD');
+        startDate = dayjs().startOf('month').format('YYYY-MM-DD');
+        endDate = dayjs().endOf('month').format('YYYY-MM-DD');
         break;
       case 'yearly':
-      default:
-        startDate = today.startOf('year').format('YYYY-MM-DD');
-        endDate = today.format('YYYY-MM-DD');
+        startDate = dayjs().startOf('year').format('YYYY-MM-DD');
+        endDate = dayjs().format('YYYY-MM-DD');
         break;
+      default:
+        startDate = dayjs().startOf('year').format('YYYY-MM-DD');
+        endDate = dayjs().format('YYYY-MM-DD');
     }
 
-    // Fetch data from the report model
+    // Fetch all chart data
     const salesData = await reportModel.getSalesData(startDate, endDate);
     const metricsData = await reportModel.getMetricsData(startDate, endDate);
     const revenueByProductData = await reportModel.getRevenueByProductData(startDate, endDate);
@@ -48,29 +105,27 @@ router.get('/chart-data', async (req, res) => {
     const totalCostData = await reportModel.getTotalCostData(startDate, endDate);
     const expenseData = await reportModel.getExpenseData(startDate, endDate);
 
-    // Decode and aggregate revenue by product data
+    // Process revenue by product data
     const revenueByProduct = revenueByProductData.reduce((acc, report) => {
       const products = JSON.parse(report.revenue_by_product || '[]');
-      products.forEach(product => {
-        if (product.product_name && product.total_sales) {
-          acc[product.product_name] = (acc[product.product_name] || 0) + parseFloat(product.total_sales);
+      products.forEach(({ product_name, total_sales }) => {
+        if (product_name && total_sales) {
+          acc[product_name] = (acc[product_name] || 0) + parseFloat(total_sales);
         }
       });
       return acc;
     }, {});
 
-    // Sort and get the top 5 products
+    // Sort and get top 5 products
     const top5Products = Object.entries(revenueByProduct)
-      .sort((a, b) => b[1] - a[1])
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
       .map(([product_name, total_sales]) => ({ product_name, total_sales }));
 
     // Combine revenue, total cost, and expenses for 3-Column Chart
-    const combinedData = revenueData.map(data => {
-      const date = data.date;
-      const revenue = parseFloat(data.revenue || 0);
-      const totalCost = parseFloat(totalCostData.find(item => item.date === date)?.total_cost || 0);
-      const expenses = parseFloat(expenseData.find(item => item.date === date)?.total_expenses || 0);
+    const combinedData = revenueData.map(({ date, revenue }) => {
+      const totalCost = parseFloat(totalCostData.find((item) => item.date === date)?.total_cost || 0);
+      const expenses = parseFloat(expenseData.find((item) => item.date === date)?.total_expenses || 0);
       const totalExpenses = totalCost + expenses;
       const profit = revenue - totalExpenses;
 
@@ -82,7 +137,7 @@ router.get('/chart-data', async (req, res) => {
       };
     });
 
-    // Return the data for the charts
+    // Send the chart data response
     res.json({
       'apex-basic': salesData,
       'apex-line-area': metricsData,
@@ -90,9 +145,7 @@ router.get('/chart-data', async (req, res) => {
       'apex-column': combinedData,
     });
   } catch (err) {
-    console.error('Database error:', err);
-    res.status(500).json({ error: 'Database error. Please try again later.' });
+    console.error('Error fetching chart data:', err);
+    res.status(500).json({ error: 'Failed to retrieve chart data' });
   }
-});
-
-module.exports = router;
+};
