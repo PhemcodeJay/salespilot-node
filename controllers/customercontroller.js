@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
+const reportModel = require('../models/customer');
+const userModel = require('../models/user');
 
 // MySQL connection pool setup
 const pool = mysql.createPool({

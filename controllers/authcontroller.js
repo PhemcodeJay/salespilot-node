@@ -3,9 +3,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const mysql = require('mysql2/promise');
-const ActivationCode = require('../models/Activation-code');
-const PasswordReset = require('../models/PasswordReset');
-const User = require('../models/User');
+const ActivationCode = require('../models/activation-code');
+const PasswordReset = require('../models/passwordreset');
+const User = require('../models/user');
 const Subscription = require('../models/subscriptions');
 
 // MySQL connection pool setup using environment variables

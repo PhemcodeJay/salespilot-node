@@ -1,5 +1,6 @@
 const reportModel = require('../models/report'); // Import the report model
 const dayjs = require('day'); // Date library
+const userModel = require('../models/user');
 
 // Create a report
 exports.createReport = async (req, res) => {
