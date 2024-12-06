@@ -1,7 +1,9 @@
+const express = require('express');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 const pool = require('../models/db');
+const router = express.Router(); // Create a router instance
 
 // POST: Generate PDF for a sale
 async function generateSalePdf(req, res) {
