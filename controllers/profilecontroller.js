@@ -1,14 +1,14 @@
-const User = require('./models/User'); // Assuming the model is in the 'models' folder
+const User = require('./models/user'); // Assuming the model is in the 'models' folder
+const Subscription = require('./models/subscriptions'); // Import the subscriptions model
 const dayjs = require('dayjs'); // For date manipulation
 const db = require('./db'); // Assuming the db connection is configured here
 
 // Helper function to check if a user has an active subscription
 const checkSubscription = async (userId) => {
-  const query = 'SELECT * FROM subscriptions WHERE user_id = ? AND status = "active"';
-  
   try {
-    const [rows] = await db.query(query, [userId]);
-    return rows.length > 0;
+    // Fetch subscription status using the subscriptions model
+    const activeSubscription = await Subscription.getActiveSubscription(userId);
+    return activeSubscription ? true : false; // Return true if subscription is active, false otherwise
   } catch (error) {
     throw new Error(`Error checking subscription: ${error.message}`);
   }
@@ -21,7 +21,7 @@ exports.getUserProfile = async (req, res) => {
   try {
     // Fetch user data from the 'users' table using User model
     const user = await User.getById(userId);
-    
+
     if (!user) {
       return res.status(404).send('User not found');
     }
@@ -47,7 +47,7 @@ exports.updateUserProfile = async (req, res) => {
   try {
     // Update user profile using the User model
     const updated = await User.update(userId, { username, email, password, phone, role });
-    
+
     if (updated) {
       res.send('Profile updated successfully');
     } else {
@@ -64,7 +64,7 @@ exports.deleteUserProfile = async (req, res) => {
   try {
     // Delete user profile using the User model
     const deleted = await User.delete(userId);
-    
+
     if (deleted) {
       res.send('Profile deleted successfully');
     } else {
@@ -79,15 +79,12 @@ exports.getSubscriptionStatus = async (req, res) => {
   const userId = req.params.userId;
 
   try {
-    // Fetch user's subscription from the 'subscriptions' table
-    const query = 'SELECT * FROM subscriptions WHERE user_id = ?';
-    const [rows] = await db.query(query, [userId]);
-    
-    if (rows.length === 0) {
-      return res.status(404).send('No subscription found');
-    }
+    // Fetch the user's active subscription using the Subscription model
+    const subscription = await Subscription.getActiveSubscription(userId);
 
-    const subscription = rows[0];
+    if (!subscription) {
+      return res.status(404).send('No active subscription found');
+    }
 
     // Check if the subscription is active and within the valid period
     const isActive = dayjs().isBetween(subscription.start_date, subscription.end_date, null, '[]');
@@ -119,15 +116,17 @@ exports.processPayment = async (req, res) => {
     const [paymentResult] = await db.query(query, [userId, amount, paymentDate, 'completed']);
 
     if (paymentResult.insertId) {
-      // Update subscription status after successful payment
+      // After successful payment, update the subscription
       const subscriptionEndDate = dayjs().add(1, 'year').format('YYYY-MM-DD'); // Example: yearly subscription
 
-      const updateSubscriptionQuery = `
-        UPDATE subscriptions
-        SET status = ?, end_date = ?
-        WHERE user_id = ?
-      `;
-      await db.query(updateSubscriptionQuery, ['active', subscriptionEndDate, userId]);
+      const subscriptionData = {
+        user_id: userId,
+        status: 'active',
+        end_date: subscriptionEndDate
+      };
+
+      // Update the subscription using the Subscription model
+      await Subscription.updateSubscription(userId, subscriptionData);
 
       res.send('Payment processed and subscription activated');
     } else {
