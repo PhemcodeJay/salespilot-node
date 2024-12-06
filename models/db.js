@@ -1,28 +1,18 @@
-const mysql = require('mysql2/promise'); // Use the promise-based version
+const mysql = require('mysql2');
 
-const hostname = 'localhost';
-const username = 'root';
-const password = '';
-const database = 'dbs13455438';
+// Create database connection pool
+const pool = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: '',
+  database: 'dbs13455438',
+  charset: 'utf8mb4',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+});
 
-// Async function to get the connection
-async function getConnection() {
-    try {
-        const connection = await mysql.createConnection({
-            host: hostname,
-            user: username,
-            password: password,
-            database: database,
-            charset: 'utf8',
-        });
+// Promisify the pool for async/await support
+const db = pool.promise();
 
-        console.log('Database connected successfully');
-        return connection;
-    } catch (error) {
-        console.error('Database connection failed:', error.message);
-        throw error;
-    }
-}
-
-// Export the getConnection function for use in other files
-module.exports = { getConnection };
+module.exports = db;
