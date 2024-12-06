@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const paymentController = require('./controllers/payController');
+const paymentController = require('../controllers/paycontroller');
 
 // Route to check subscription status and process payment
 router.post('/check-subscription', paymentController.checkSubscriptionAndProcessPayment);

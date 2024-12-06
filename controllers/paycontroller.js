@@ -1,5 +1,5 @@
 const Payment = require('../models/payment');
-const Subscription = require('../models/subscription');
+const Subscription = require('./models/subscription');
 
 exports.checkSubscriptionAndProcessPayment = async (req, res) => {
   const { user_id, payment_method, payment_proof, payment_amount, payment_status } = req.body;
@@ -43,7 +43,6 @@ exports.checkSubscriptionAndProcessPayment = async (req, res) => {
     // Step 4: If the payment was successful, upgrade or renew the subscription
     if (payment_status === 'completed') {
       // You can handle the upgrade or renewal logic here
-      // For example, upgrading to a different plan or renewing the subscription
       await Subscription.upgradeSubscription(user_id, 'Premium'); // Upgrade to a new plan (if applicable)
     }
 
