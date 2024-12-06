@@ -15,6 +15,7 @@ const pool = mysql.createPool({
 // Promisify the pool for async/await usage
 const db = pool.promise();
 
+
 /**
  * Product Model
  */
