@@ -4,43 +4,30 @@ const authController = require('../controllers/authcontroller'); // Import the c
 
 const router = express.Router();
 
-// Serve static files from the 'public' folder
+// Static File Routes
 router.use(express.static(path.join(__dirname, '../public')));
 
-// Serve the signup page
+// Serve HTML Pages
 router.get('/signup', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/signup.html'));
 });
-
-// Serve the login page
 router.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/login.html'));
 });
-
-// Serve the password recovery page
 router.get('/recoverpwd', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/recoverpwd.html'));
 });
-
-// Serve the account activation page
 router.get('/activate', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/activate.html'));
 });
 
-// User Registration Route
-router.post('/signup', authController.signup);
+// Auth API Routes
+router.post('/signup', authController.signup); // User registration
+router.post('/login', authController.login); // Login
+router.post('/request-password-reset', authController.requestPasswordReset); // Request password reset
+router.post('/reset-password', authController.resetPassword); // Reset password
+router.post('/activate', authController.activateAccount); // Account activation
+router.get('/activate/:token', authController.activateAccount); // Activation via token (optional)
 
-// Login Route
-router.post('/login', authController.login);
-
-// Password Reset Request Route
-router.post('/password-reset', authController.passwordReset);
-
-// Reset Password Route
-router.post('/reset-password', authController.resetPassword);
-
-// Account Activation Route
-router.get('/activate/:token', authController.activateAccount);
-
+// Export the Router
 module.exports = router;
-

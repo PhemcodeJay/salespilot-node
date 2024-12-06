@@ -67,7 +67,6 @@
                         </div>
                       </form>
                       
-
                       <div class="text-center">
                         <button type="button" id="loginButton" class="btn bg-gradient-primary w-100 my-4 mb-2" onclick="window.location.href='/login'">Login</button>
                       </div>
@@ -117,8 +116,10 @@
         if (!password) document.getElementById('password-error').textContent = 'Password is required.';
         if (!confirmPassword) document.getElementById('confirm-password-error').textContent = 'Please confirm your password.';
         if (!email) document.getElementById('email-error').textContent = 'Email is required.';
-        if (!termsAccepted) document.getElementById('error-message').textContent = 'You must agree to the terms and conditions.';
-        document.getElementById('error-message').style.display = 'block';
+        if (!termsAccepted) {
+          document.getElementById('error-message').textContent = 'You must agree to the terms and conditions.';
+          document.getElementById('error-message').style.display = 'block';
+        }
         return;
       }
 
@@ -130,9 +131,7 @@
       try {
         const response = await fetch('/signup', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password, email }),
         });
 
@@ -140,7 +139,7 @@
 
         if (response.ok) {
           // Redirect to login page on successful signup
-          window.location.href = '/login';
+          window.location.href = '/login.html';
         } else {
           document.getElementById('error-message').textContent = data.error || 'An error occurred. Please try again.';
           document.getElementById('error-message').style.display = 'block';
