@@ -1,6 +1,6 @@
-const db = require('./db'); // Assuming `db` is configured for your MySQL database connection
+const db = require('../config/db'); // Assuming `db` is configured for your MySQL database connection
 const session = require('express-session');
-const dayjs = require('dayjs'); // Day.js for date handling
+const dayjs = require('day'); // Day.js for date handling
 
 // Middleware to handle sessions
 const sessionMiddleware = session({

@@ -8,7 +8,7 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 
 // Import Routes
-const dashboardRoutes = require('.routes/dashboardRoutes');
+const dashboardRoutes = require('./routes/dashboardRoute');
 const supplierRoute = require('./routes/supplierRoute');
 const invoiceRoute = require('./routes/invoiceRoute');
 const salesRoute = require('./routes/salesRoute');
@@ -78,7 +78,7 @@ require('./cron/subscriptioncron');  // This will start the cron job
 
 
 // Use Routes
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/dashboard', dashboardRoutes);    // Dashboard routes
 app.use('/api/supplier', supplierRoute);      // Supplier routes
 app.use('/api/invoice', invoiceRoute);        // Invoice routes
 app.use('/api/sales', salesRoute);            // Sales routes
