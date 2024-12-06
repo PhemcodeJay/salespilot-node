@@ -6,7 +6,7 @@ const mysql = require('mysql2/promise');
 const ActivationCode = require('../models/Activation-code');
 const PasswordReset = require('../models/PasswordReset');
 const User = require('../models/User');
-const Subscription = require('../models/Subscription');
+const Subscription = require('../models/subscriptions');
 
 // MySQL connection pool setup using environment variables
 const pool = mysql.createPool({

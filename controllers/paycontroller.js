@@ -1,5 +1,5 @@
 const Payment = require('../models/payment');
-const Subscription = require('./models/subscription');
+const Subscription = require('../models/subscriptions');
 
 exports.checkSubscriptionAndProcessPayment = async (req, res) => {
   const { user_id, payment_method, payment_proof, payment_amount, payment_status } = req.body;

@@ -50,6 +50,7 @@ db.connect((err) => {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+
 // Session Configuration
 app.use(session({
     secret: 'your-secret-key', // Use a strong secret key here
@@ -65,6 +66,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+// Import the cron job for subscriptions
+require('./cron/subscriptioncron');  // This will start the cron job
+
 
 // Use Routes
 app.use('/api/supplier', supplierRoute);      // Supplier routes
@@ -84,6 +89,8 @@ app.use('/api/page-access', pageAccessRoute); // Page Access routes
 app.use('/api/pay', payRoute);                // Payment routes
 app.use('/api/profile', profileRoute);        // Profile routes
 app.use('/api/staff', staffRoute);            // Staff routes
+app.use('/api/subscriptions', subscriptionRoute); // Use the subscription routes
+
 
 // Default error handling for undefined routes
 app.use((req, res, next) => {
@@ -102,6 +109,8 @@ const pricingPlans = [
     { planKey: 'Buisness', planName: 'Buisness Plan', price: '15.00', paypalPlanId: 'P-7E210255TM029860GM5HYC4B' },
     { planKey: 'Enterprise', planName: 'Enterprise Plan', price: '25.00', paypalPlanId: 'P-7E210255TM029860GM5HYC4C' }
 ];
+
+
 
 // Start the Server
 const port = process.env.PORT || 3000;
