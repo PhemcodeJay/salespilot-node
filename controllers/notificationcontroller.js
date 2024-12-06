@@ -2,6 +2,11 @@ require('dotenv').config(); // Load environment variables
 const mysql = require('mysql2');
 const jwt = require('jsonwebtoken');
 const fetch = require('node-fetch');
+const userModel = require('../models/user');
+const inventoryModel = require('../models/inventory');
+const reportModel = require('../models/report');
+
+
 
 // MySQL connection pool setup
 const pool = mysql.createPool({

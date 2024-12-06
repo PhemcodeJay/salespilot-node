@@ -2,6 +2,8 @@ const User = require('../models/user'); // Assuming the model is in the 'models'
 const Subscription = require('../models/subscriptions'); // Import the subscriptions model
 const dayjs = require('day'); // For date manipulation
 const db = require('../config/db'); // Assuming the db connection is configured here
+const userModel = require('../models/user');
+const subscriptionModel = require('../models/subscriptions');
 
 // Helper function to check if a user has an active subscription
 const checkSubscription = async (userId) => {

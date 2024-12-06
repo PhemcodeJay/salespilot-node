@@ -1,7 +1,8 @@
 const express = require('express');
 const mysql = require('mysql2');
 const pdfkit = require('pdfkit'); // PDF generation
-
+const supplierController = require('../controllers/suppliercontroller');
+const authController = require('../controllers/authcontroller');
 const router = express.Router();
 
 // MySQL connection setup

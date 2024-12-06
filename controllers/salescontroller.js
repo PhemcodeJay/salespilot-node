@@ -3,6 +3,11 @@ const { Sequelize, DataTypes } = require('sequelize');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
+const userModel = require('../models/user');
+const salesModel = require('../models/sales');
+const productModel = require('../models/product');
+const inventoryModel = require('../models/inventory');
+
 
 // Initialize Express and database connection
 const app = express();

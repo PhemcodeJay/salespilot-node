@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs'); // Add fs for file system operations
 const app = express();
 const StaffModel = require('./models/staffs');
+const userModel = require('../models/user');
 
 // MySQL connection pool setup
 const pool = mysql.createPool({

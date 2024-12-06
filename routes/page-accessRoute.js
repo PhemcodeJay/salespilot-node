@@ -2,8 +2,13 @@ const express = require('express');
 const mysql = require('mysql2');
 const path = require('path');
 const { DateTime } = require('luxon'); // For date comparison
-
+const profileController = require('../controllers/profilecontroller');
+const authController = require('../controllers/authcontroller');
+const subscriptionController = require('../controllers/subscriptioncontroller');
 const router = express.Router();
+
+// Import the cron job for subscriptions
+// require('./cron/subscriptionCron');
 
 // MySQL connection setup (adjust credentials if needed)
 const connection = mysql.createConnection({

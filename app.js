@@ -6,6 +6,7 @@ const mysql = require('mysql2');
 const path = require('path');
 const session = require('express-session');
 const bodyParser = require('body-parser');
+const router = express.Router(); // Create a router instance
 
 // Import Routes
 const dashboardRoutes = require('./routes/dashboardRoute');
@@ -84,7 +85,6 @@ app.use('/api/invoice', invoiceRoute);        // Invoice routes
 app.use('/api/sales', salesRoute);            // Sales routes
 app.use('/api/report', reportRoute);          // Report routes
 app.use('/api/product', productRoute);        // Product routes
-app.use('/api/user', userRoute);              // User routes
 app.use('/api/analytics', analyticsRoute);    // Analytics routes
 app.use('/api/auth', authRoute);              // Authentication routes
 app.use('/api/category', categoryRoute);      // Category routes
@@ -116,7 +116,6 @@ const pricingPlans = [
     { planKey: 'Buisness', planName: 'Buisness Plan', price: '15.00', paypalPlanId: 'P-7E210255TM029860GM5HYC4B' },
     { planKey: 'Enterprise', planName: 'Enterprise Plan', price: '25.00', paypalPlanId: 'P-7E210255TM029860GM5HYC4C' }
 ];
-
 
 
 // Start the Server

@@ -3,6 +3,9 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const productController = require('../controllers/productcontroller');
+const authController = require('../controllers/authcontroller');
+
 
 // Middleware for file uploads
 const upload = multer({

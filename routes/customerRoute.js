@@ -4,6 +4,8 @@ const fs = require('fs');
 const router = express.Router();
 const customerController = require('../controllers/customercontroller');
 const verifyToken = require('../verifyToken');
+const authController = require('../controllers/authcontroller');
+
 
 
 // Serve static files (CSS, JS, images, etc.)

@@ -3,7 +3,8 @@ const express = require('express');
 const path = require('path');
 const expenseController = require('../controllers/expensecontroller');  // Adjust path if necessary
 const verifyToken = require('../verifyToken');  // Import the verifyToken function
-
+const expenseController = require('../controllers/expensecontroller');
+const authController = require('../controllers/authcontroller');
 const router = express.Router();
 
 // Serve static files (CSS, JS, images, etc.) from the 'public' folder

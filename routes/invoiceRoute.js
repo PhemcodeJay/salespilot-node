@@ -3,6 +3,9 @@ const path = require('path');
 const router = express.Router();
 const { generateInvoicesPdf, createInvoice, getInvoice, updateInvoice, deleteInvoice, generateInvoicePDF } = require('../controllers/invoicecontroller');
 const verifyToken = require('../verifyToken'); // Adjusted import path
+const invoiceController = require('../controllers/invoicecontroller');
+const authController = require('../controllers/authcontroller');
+
 
 // Serve the invoice list page
 router.get('/pages-invoice', verifyToken, (req, res) => {

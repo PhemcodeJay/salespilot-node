@@ -10,7 +10,7 @@ const pool = mysql.createPool({
   host: 'localhost',
   user: 'root',
   password: '', // Your DB password
-  database: 'salespilot'
+  database: 'dbs13455438'
 });
 
 // Helper function to execute queries

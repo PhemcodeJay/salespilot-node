@@ -1,13 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const mysql = require('mysql2');
+const notificationController = require('../controllers/notificationcontroller');
+const authController = require('../controllers/authcontroller');
 
 // Setup MySQL connection
 const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASS || '',
-    database: process.env.DB_NAME || 'your_database',
+    database: process.env.DB_NAME || 'dbs13455438',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
@@ -113,8 +115,8 @@ router.get('/reports', (req, res) => {
 
 // Route to fetch sales notifications
 router.get('/sales', (req, res) => {
-    const highSales = 500;
-    const lowSales = 10;
+    const highSales = 50000;
+    const lowSales = 10000;
 
     const query = `
         SELECT s.sale_id, p.product_name, s.sale_qty, s.sale_price, p.image_path
@@ -161,5 +163,6 @@ router.get('/:category', (req, res) => {
         .then(results => res.json(results))
         .catch(err => res.status(500).json({ error: 'Database query error', details: err.message }));
 });
+
 
 module.exports = router;

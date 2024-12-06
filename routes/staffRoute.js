@@ -3,6 +3,8 @@ const mysql = require('mysql2');
 const PDFDocument = require('pdfkit');
 const router = express.Router();
 const path = require('path');
+const authController = require('../controllers/authcontroller');
+const staffController = require('../controllers/staffcontroller');
 
 // MySQL connection setup using pool for better performance and management
 const db = mysql.createPool({

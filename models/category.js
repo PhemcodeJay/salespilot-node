@@ -1,3 +1,5 @@
+const db = require('./db'); // Assuming the db connection pool is defined in 'db.js'
+
 class Categories {
     static async createCategoriesTable() {
       const createTableQuery = `

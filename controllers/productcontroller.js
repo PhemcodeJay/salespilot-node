@@ -7,6 +7,9 @@ const mysql = require('mysql2');
 const jwt = require('jsonwebtoken');
 const PDFDocument = require('pdfkit');
 const { pool } = require('./db'); // Assuming pool is already configured in db.js
+const productModel = require('../models/product');
+const inventoryModel = require('../models/inventory');
+const userModel = require('../models/user');
 
 
 // Generate PDF report of all Products

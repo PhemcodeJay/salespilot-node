@@ -6,6 +6,8 @@ const path = require('path');
 const fs = require('fs');
 const FPDF = require('fpdf'); // PDF generation
 const jwt = require('jsonwebtoken');
+const userModel = require('../models/user');
+const supplierModel = require('../models/supplier');
 
 const router = express.Router();
 

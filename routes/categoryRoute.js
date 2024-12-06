@@ -3,14 +3,20 @@ const mysql = require('mysql2');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const router = express.Router();
+const productController = require('../controllers/productcontroller');
+const authController = require('../controllers/authcontroller');
+
 
 // Create MySQL connection
 const connection = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'salespilot'
+  database: 'dbs13455438'
 });
+
+
+
 
 // Session setup
 router.use(session({

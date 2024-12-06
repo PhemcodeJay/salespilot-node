@@ -1,6 +1,8 @@
 const express = require('express');
 const { checkSubscriptionAndProcessPayment, getPaymentsByUser, getPaymentById, updatePaymentStatus } = require('../controllers/paycontroller');
 const { checkAndDeactivateSubscriptions } = require('../controllers/subscriptioncontroller');
+const proileController = require('../controllers/profilecontroller');
+const authController = require('../controllers/authcontroller');
 
 const router = express.Router();
 

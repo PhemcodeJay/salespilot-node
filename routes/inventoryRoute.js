@@ -3,7 +3,9 @@ const mysql = require('mysql2');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
-
+const productController = require('../controllers/productcontroller');
+const authController = require('../controllers/authcontroller');
+const salesController = require('../controllers/salescontroller');
 const router = express.Router();
 
 // MySQL connection setup
@@ -11,8 +13,10 @@ const connection = mysql.createConnection({
     host: 'localhost',
     user: 'root',
     password: '',
-    database: 'salespilot'
+    database: 'dbs13455438'
 });
+
+
 
 // Middleware to parse incoming JSON requests
 router.use(express.json());

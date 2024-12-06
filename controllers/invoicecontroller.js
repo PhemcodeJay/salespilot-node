@@ -3,6 +3,9 @@ const fs = require('fs');
 const pdfkit = require('pdfkit');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const userModel = require('../models/user');
+const invoiceModel = require('../models/invoice');
+
 
 // MySQL connection pool setup
 const pool = mysql.createPool({
