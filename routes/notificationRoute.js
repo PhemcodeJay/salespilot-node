@@ -1,14 +1,28 @@
 const express = require('express');
 const router = express.Router();
-const mysql = require('mysql');
+const mysql = require('mysql2');
 
 // Setup MySQL connection
-const connection = mysql.createConnection({
-    host: 'your_host',
-    user: 'your_user',
-    password: 'your_password',
-    database: 'your_database',
+const pool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASS || '',
+    database: process.env.DB_NAME || 'your_database',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
 });
+
+// Helper function to execute database queries
+const executeQuery = (query, params, res) => {
+    pool.query(query, params, (err, results) => {
+        if (err) {
+            console.error('Database Query Error:', err.message);
+            return res.status(500).json({ error: 'Database query error', details: err.message });
+        }
+        res.json(results);
+    });
+};
 
 // Route to fetch inventory notifications
 router.get('/inventory', (req, res) => {
@@ -22,13 +36,8 @@ router.get('/inventory', (req, res) => {
         WHERE i.available_stock < ? OR i.available_stock > ?
         ORDER BY i.last_updated DESC
     `;
-    
-    connection.query(query, [lowStock, highStock], (err, results) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        res.json(results);
-    });
+
+    executeQuery(query, [lowStock, highStock], res);
 });
 
 // Route to fetch report notifications
@@ -46,13 +55,8 @@ router.get('/reports', (req, res) => {
            OR JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) < ?
         ORDER BY r.report_date DESC
     `;
-    
-    connection.query(query, [highRevenue, lowRevenue], (err, results) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        res.json(results);
-    });
+
+    executeQuery(query, [highRevenue, lowRevenue], res);
 });
 
 // Route to fetch sales notifications
@@ -67,13 +71,8 @@ router.get('/sales', (req, res) => {
         WHERE s.sale_qty > ? OR s.sale_qty < ?
         ORDER BY s.sale_date DESC
     `;
-    
-    connection.query(query, [lowSales, highSales], (err, results) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        res.json(results);
-    });
+
+    executeQuery(query, [lowSales, highSales], res);
 });
 
 // Route to fetch customer notifications
@@ -87,28 +86,22 @@ router.get('/customers', (req, res) => {
         WHERE c.purchase_history > ?
         ORDER BY c.registration_date DESC
     `;
-    
-    connection.query(query, [newCustomerThreshold], (err, results) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        res.json(results);
-    });
+
+    executeQuery(query, [newCustomerThreshold], res);
 });
 
 // Route to fetch notifications for any other categories dynamically
 router.get('/:category', (req, res) => {
     const category = req.params.category;
-    const query = `
-        SELECT * FROM ${category} WHERE notification_flag = 1
-    `;
 
-    connection.query(query, (err, results) => {
-        if (err) {
-            return res.status(500).json({ error: `Error fetching notifications for ${category}: ${err.message}` });
-        }
-        res.json(results);
-    });
+    // Validate category name to prevent SQL injection
+    if (!['inventory', 'reports', 'sales', 'customers'].includes(category)) {
+        return res.status(400).json({ error: 'Invalid category' });
+    }
+
+    const query = `SELECT * FROM ?? WHERE notification_flag = 1`;
+
+    executeQuery(query, [category], res);
 });
 
 module.exports = router;

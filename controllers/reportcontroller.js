@@ -1,7 +1,10 @@
 const express = require('express');
 const session = require('express-session');
 const mysql = require('mysql2');
-const { Op } = require('sequelize');
+const jwt = require('jsonwebtoken');
+const path = require('path');
+const fs = require('fs');
+const pdfkit = require('pdfkit');
 const moment = require('moment'); // For date manipulation
 
 // MySQL connection pool setup
@@ -14,13 +17,7 @@ const pool = mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0
 });
-// MySQL connection setup
-const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-});
+
 // JWT token verification function
 const verifyToken = (token) => {
     try {
@@ -29,14 +26,15 @@ const verifyToken = (token) => {
         return null;
     }
 };
-// Generate PDF report of all poriduct reports
-const generateporiduct reportsPdf = async (req, res) => {
-    try {
-        // Fetch all poriduct reports
-        const [poriduct reports] = await pool.promise().query('SELECT * FROM poriduct reports ORDER BY date DESC');
 
-        if (poriduct reports.length === 0) {
-            return res.status(404).json({ message: 'No poriduct reports found' });
+// Generate PDF report of all product reports
+const generateProductReportsPdf = async (req, res) => {
+    try {
+        // Fetch all product reports
+        const [productReports] = await pool.promise().query('SELECT * FROM product_reports ORDER BY date DESC');
+
+        if (productReports.length === 0) {
+            return res.status(404).json({ message: 'No product reports found' });
         }
 
         // Create the reports directory if it doesn't exist
@@ -49,13 +47,13 @@ const generateporiduct reportsPdf = async (req, res) => {
         const doc = new pdfkit();
         
         // Set the file name and path
-        const filePath = path.join(reportsDir, `poriduct reports_report_${Date.now()}.pdf`);
+        const filePath = path.join(reportsDir, `product_reports_report_${Date.now()}.pdf`);
 
         // Pipe the document to a file
         doc.pipe(fs.createWriteStream(filePath));
 
         // Title and headers
-        doc.fontSize(18).text('poriduct report Report', { align: 'center' });
+        doc.fontSize(18).text('Product Report', { align: 'center' });
         doc.moveDown();
         doc.fontSize(12).text(`Date Generated: ${new Date().toLocaleString()}`, { align: 'center' });
         doc.moveDown();
@@ -66,9 +64,9 @@ const generateporiduct reportsPdf = async (req, res) => {
         doc.text('ID | Description | Amount | Date | Category');
         doc.text('--------------------------------------');
         
-        // Add poriduct reports data to the PDF
-        poriduct reports.forEach(poriduct report => {
-            doc.text(`${poriduct report.id} | ${poriduct report.description} | $${poriduct report.amount} | ${poriduct report.date} | ${poriduct report.category}`);
+        // Add product reports data to the PDF
+        productReports.forEach(productReport => {
+            doc.text(`${productReport.id} | ${productReport.description} | $${productReport.amount} | ${productReport.date} | ${productReport.category}`);
         });
 
         // End and save the PDF document
@@ -80,15 +78,14 @@ const generateporiduct reportsPdf = async (req, res) => {
         return res.status(500).json({ message: 'Error generating PDF', error: err.message });
     }
 };
+
 // Fetch user details by token
 const fetchUserInfo = (username) => {
-    return new Promise((resolve, reject) => {
-        pool.query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username], (err, results) => {
-            if (err) return reject("Error fetching user info");
-            if (results.length === 0) return reject("User not found.");
-            resolve(results[0]);
+    return pool.promise().query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username])
+        .then(([results]) => {
+            if (results.length === 0) throw new Error('User not found.');
+            return results[0];
         });
-    });
 };
 
 const router = express.Router();
@@ -116,19 +113,16 @@ const checkSession = (req, res, next) => {
 router.use(checkSession);
 
 // Fetch user details from the database
-async function getUserInfo(username) {
-    const query = 'SELECT * FROM users WHERE username = ?';
-    return new Promise((resolve, reject) => {
-        db.query(query, [username], (err, results) => {
-            if (err) return reject(new Error("Error: User not found."));
-            if (results.length === 0) return reject(new Error("Error: User not found."));
-            resolve(results[0]);
+const getUserInfo = (username) => {
+    return pool.promise().query('SELECT * FROM users WHERE username = ?', [username])
+        .then(([results]) => {
+            if (results.length === 0) throw new Error("Error: User not found.");
+            return results[0];
         });
-    });
-}
+};
 
 // Calculate product category metrics
-async function calculateProductCategoryMetrics() {
+const calculateProductCategoryMetrics = async () => {
     const query = `
         SELECT
             categories.category_name AS category_name,
@@ -143,16 +137,12 @@ async function calculateProductCategoryMetrics() {
         LEFT JOIN sales ON sales.product_id = products.id
         GROUP BY categories.category_name
     `;
-    return new Promise((resolve, reject) => {
-        db.query(query, (err, results) => {
-            if (err) return reject(err);
-            resolve(results);
-        });
-    });
-}
+    const [results] = await pool.promise().query(query);
+    return results;
+};
 
 // Get revenue by category and calculate financial metrics
-async function generateReportMetrics(salesCategoryData) {
+const generateReportMetrics = (salesCategoryData) => {
     let totalSales = 0, totalQuantity = 0, totalProfit = 0;
 
     salesCategoryData.forEach(category => {
@@ -179,52 +169,40 @@ async function generateReportMetrics(salesCategoryData) {
         stockToSalesRatio,
         sellThroughRate
     };
-}
+};
 
 // Fetch previous year's revenue for year-over-year growth
-async function getPreviousYearRevenue(date) {
+const getPreviousYearRevenue = async (date) => {
     const previousYearDate = moment(date).subtract(1, 'year').format('YYYY-MM-DD');
     const query = 'SELECT revenue FROM sales_analytics WHERE date LIKE ?';
-    return new Promise((resolve, reject) => {
-        db.query(query, [`${previousYearDate}%`], (err, results) => {
-            if (err) return reject(err);
-            resolve(results.length > 0 ? results[0].revenue : 0);
-        });
-    });
-}
+    const [results] = await pool.promise().query(query, [`${previousYearDate}%`]);
+    return results.length > 0 ? results[0].revenue : 0;
+};
 
 // Calculate Year-Over-Year Growth
-function calculateYearOverYearGrowth(totalSales, previousYearRevenue) {
+const calculateYearOverYearGrowth = (totalSales, previousYearRevenue) => {
     return previousYearRevenue > 0 ? ((totalSales - previousYearRevenue) / previousYearRevenue) * 100 : 0;
-}
+};
 
 // Check if a report already exists for the current date
-async function checkIfReportExists(date) {
+const checkIfReportExists = async (date) => {
     const query = 'SELECT * FROM sales_analytics WHERE date = ?';
-    return new Promise((resolve, reject) => {
-        db.query(query, [date], (err, results) => {
-            if (err) return reject(err);
-            resolve(results.length > 0 ? results[0] : null);
-        });
-    });
-}
+    const [results] = await pool.promise().query(query, [date]);
+    return results.length > 0 ? results[0] : null;
+};
 
 // Insert or update the report in the database
-async function saveReport(date, reportData, existingReport = null) {
+const saveReport = async (date, reportData, existingReport = null) => {
     const query = existingReport 
         ? 'UPDATE sales_analytics SET ? WHERE id = ?' 
         : 'INSERT INTO sales_analytics SET ?';
 
-    return new Promise((resolve, reject) => {
-        db.query(query, [reportData, existingReport ? existingReport.id : null], (err, results) => {
-            if (err) return reject(err);
-            resolve(results);
-        });
-    });
-}
+    const [results] = await pool.promise().query(query, [reportData, existingReport ? existingReport.id : null]);
+    return results;
+};
 
 // Fetch inventory and report notifications
-async function getNotifications() {
+const getNotifications = async () => {
     const inventoryQuery = `
         SELECT * FROM inventory
         WHERE available_stock < 10 OR available_stock > 1000
@@ -235,16 +213,11 @@ async function getNotifications() {
         WHERE revenue > 10000 OR revenue < 1000
         ORDER BY report_date DESC
     `;
-    return new Promise((resolve, reject) => {
-        db.query(inventoryQuery, (err, inventoryNotifications) => {
-            if (err) return reject(err);
-            db.query(reportQuery, (err, reportNotifications) => {
-                if (err) return reject(err);
-                resolve({ inventoryNotifications, reportNotifications });
-            });
-        });
-    });
-}
+    const [inventoryNotifications] = await pool.promise().query(inventoryQuery);
+    const [reportNotifications] = await pool.promise().query(reportQuery);
+
+    return { inventoryNotifications, reportNotifications };
+};
 
 // Main function to generate the report
 router.get('/generate-report', async (req, res) => {
@@ -275,17 +248,18 @@ router.get('/generate-report', async (req, res) => {
 
         await saveReport(userInfo.date, reportData, existingReport);
 
-        const { inventoryNotifications, reportNotifications } = await getNotifications();
+        const notifications = await getNotifications();
 
-        res.json({
+        res.render('report-dashboard', {
             userInfo,
-            reportData,
-            inventoryNotifications,
-            reportNotifications
+            reportMetrics,
+            notifications,
+            salesCategoryData
         });
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("Internal Server Error");
+
+    } catch (err) {
+        console.error('Error generating report:', err.message);
+        res.status(500).json({ message: 'Error generating report' });
     }
 });
 

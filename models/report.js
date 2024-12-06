@@ -53,6 +53,10 @@ class Reports {
 
   // Create a new report
   static async createReport(reportData) {
+    if (!reportData.report_date || !reportData.revenue) {
+      throw new Error("Required fields missing: report_date or revenue.");
+    }
+
     const insertQuery = `
       INSERT INTO reports
       (report_date, revenue, profit_margin, revenue_by_product, year_over_year_growth, cost_of_selling,
@@ -86,6 +90,7 @@ class Reports {
       const [result] = await db.query(insertQuery, preparedData);
       return { reports_id: result.insertId };
     } catch (error) {
+      console.error(`Error creating report: ${error.message}`);
       throw new Error(`Error creating report: ${error.message}`);
     }
   }
@@ -101,50 +106,66 @@ class Reports {
       }
       return rows[0];
     } catch (error) {
+      console.error(`Error fetching report: ${error.message}`);
       throw new Error(`Error fetching report: ${error.message}`);
     }
   }
 
-  // Get all reports
-  static async getAllReports({ page = 1, limit = 10 } = {}) {
+  // Get all reports with dynamic pagination and sorting
+  static async getAllReports({ page = 1, limit = 10, sortBy = 'report_date', order = 'DESC' } = {}) {
     const offset = (page - 1) * limit;
-    const query = `SELECT * FROM reports ORDER BY report_date DESC LIMIT ? OFFSET ?`;
+    const query = `
+      SELECT * FROM reports
+      ORDER BY ${mysql.escapeId(sortBy)} ${mysql.escape(order)}
+      LIMIT ? OFFSET ?
+    `;
 
     try {
       const [rows] = await db.query(query, [limit, offset]);
       return rows;
     } catch (error) {
+      console.error(`Error fetching all reports: ${error.message}`);
       throw new Error(`Error fetching all reports: ${error.message}`);
     }
   }
 
   // Update an existing report
   static async updateReport(reports_id, updatedData) {
+    if (!reports_id || !updatedData) {
+      throw new Error("Missing required parameters: reports_id or updatedData.");
+    }
+
     const keys = Object.keys(updatedData);
     const values = Object.values(updatedData);
 
     // Add reports_id to values for the WHERE clause
     values.push(reports_id);
 
-    const setClause = keys.map((key) => `${key} = ?`).join(', ');
+    const setClause = keys.map((key) => `${mysql.escapeId(key)} = ?`).join(', ');
     const updateQuery = `UPDATE reports SET ${setClause} WHERE reports_id = ?`;
 
     try {
       const [result] = await db.query(updateQuery, values);
       return result.affectedRows > 0;
     } catch (error) {
+      console.error(`Error updating report: ${error.message}`);
       throw new Error(`Error updating report: ${error.message}`);
     }
   }
 
   // Delete a report
   static async deleteReport(reports_id) {
+    if (!reports_id) {
+      throw new Error("Missing required parameter: reports_id.");
+    }
+
     const deleteQuery = `DELETE FROM reports WHERE reports_id = ?`;
 
     try {
       const [result] = await db.query(deleteQuery, [reports_id]);
       return result.affectedRows > 0;
     } catch (error) {
+      console.error(`Error deleting report: ${error.message}`);
       throw new Error(`Error deleting report: ${error.message}`);
     }
   }

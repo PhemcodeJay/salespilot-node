@@ -1,12 +1,17 @@
+require('dotenv').config(); // Load environment variables
+const mysql = require('mysql2');
+const jwt = require('jsonwebtoken');
+const fetch = require('node-fetch');
+
 // MySQL connection pool setup
 const pool = mysql.createPool({
-    host: 'localhost',
-    user: 'root', // Replace with actual DB username
-    password: '', // Replace with actual DB password
-    database: 'dbs13455438',
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASS || '',
+    database: process.env.DB_NAME || 'dbs13455438',
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
 });
 
 // JWT token verification function
@@ -14,6 +19,7 @@ const verifyToken = (token) => {
     try {
         return jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
+        console.error('Token verification error:', err.message);
         return null;
     }
 };
@@ -21,126 +27,56 @@ const verifyToken = (token) => {
 // Fetch user details by token
 const fetchUserInfo = (username) => {
     return new Promise((resolve, reject) => {
-        pool.query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username], (err, results) => {
-            if (err) return reject("Error fetching user info");
-            if (results.length === 0) return reject("User not found.");
+        const query = `
+            SELECT username, email, date, phone, location, user_image
+            FROM users
+            WHERE username = ?
+        `;
+        pool.query(query, [username], (err, results) => {
+            if (err) {
+                console.error('SQL Error:', err.message);
+                return reject('Database query error');
+            }
+            if (results.length === 0) return reject('User not found');
             resolve(results[0]);
         });
     });
 };
 
-// Fetch notifications for inventory with product images
-async function fetchInventoryNotifications() {
-    try {
-        const response = await fetch('/notifications/inventory', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
-
-        if (response.ok) {
-            const inventoryNotifications = await response.json();
-            // Handle the data (e.g., display on the front-end)
-            console.log('Inventory Notifications:', inventoryNotifications);
-        } else {
-            console.error('Error fetching inventory notifications:', response.statusText);
-        }
-    } catch (error) {
-        console.error('Error fetching inventory notifications:', error);
-    }
-}
-
-// Fetch notifications for reports with product images
-async function fetchReportsNotifications() {
-    try {
-        const response = await fetch('/notifications/reports', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
-
-        if (response.ok) {
-            const reportsNotifications = await response.json();
-            // Handle the data (e.g., display on the front-end)
-            console.log('Reports Notifications:', reportsNotifications);
-        } else {
-            console.error('Error fetching reports notifications:', response.statusText);
-        }
-    } catch (error) {
-        console.error('Error fetching reports notifications:', error);
-    }
-}
-
-// Fetch notifications for sales with relevant data (e.g., sales updates)
-async function fetchSalesNotifications() {
-    try {
-        const response = await fetch('/notifications/sales', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
-
-        if (response.ok) {
-            const salesNotifications = await response.json();
-            // Handle the data (e.g., display on the front-end)
-            console.log('Sales Notifications:', salesNotifications);
-        } else {
-            console.error('Error fetching sales notifications:', response.statusText);
-        }
-    } catch (error) {
-        console.error('Error fetching sales notifications:', error);
-    }
-}
-
-// Fetch notifications for customers with product images and updates
-async function fetchCustomerNotifications() {
-    try {
-        const response = await fetch('/notifications/customers', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        });
-
-        if (response.ok) {
-            const customerNotifications = await response.json();
-            // Handle the data (e.g., display on the front-end)
-            console.log('Customer Notifications:', customerNotifications);
-        } else {
-            console.error('Error fetching customer notifications:', response.statusText);
-        }
-    } catch (error) {
-        console.error('Error fetching customer notifications:', error);
-    }
-}
-
-// Fetch notifications for any other relevant categories (expand as needed)
-async function fetchOtherNotifications(route) {
+// Generic notification fetch function
+const fetchNotifications = async (route) => {
     try {
         const response = await fetch(route, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
         });
 
-        if (response.ok) {
-            const notifications = await response.json();
-            // Handle the data (e.g., display on the front-end)
-            console.log('Other Notifications:', notifications);
-        } else {
-            console.error('Error fetching other notifications:', response.statusText);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-    } catch (error) {
-        console.error('Error fetching other notifications:', error);
-    }
-}
 
-// Example calls to fetch notifications for various routes
-fetchInventoryNotifications();
-fetchReportsNotifications();
-fetchSalesNotifications();
-fetchCustomerNotifications();
+        const notifications = await response.json();
+        console.log(`Notifications from ${route}:`, notifications);
+        return notifications;
+    } catch (error) {
+        console.error(`Error fetching notifications from ${route}:`, error.message);
+    }
+};
+
+// Specific notification functions
+const fetchInventoryNotifications = async () => await fetchNotifications('/notifications/inventory');
+const fetchReportsNotifications = async () => await fetchNotifications('/notifications/reports');
+const fetchSalesNotifications = async () => await fetchNotifications('/notifications/sales');
+const fetchCustomerNotifications = async () => await fetchNotifications('/notifications/customers');
+const fetchOtherNotifications = async (route) => await fetchNotifications(route);
+
+// Exporting functions for use in routes or other parts of the application
+module.exports = {
+    verifyToken,
+    fetchUserInfo,
+    fetchInventoryNotifications,
+    fetchReportsNotifications,
+    fetchSalesNotifications,
+    fetchCustomerNotifications,
+    fetchOtherNotifications,
+};
