@@ -1,6 +1,5 @@
 require('dotenv').config();
 
-
 // app.js
 const express = require('express');
 const mysql = require('mysql2');
@@ -15,6 +14,17 @@ const salesRoute = require('./routes/salesRoute');
 const reportRoute = require('./routes/reportRoute');
 const productRoute = require('./routes/productRoute');
 const userRoute = require('./routes/userRoute');
+const analyticsRoute = require('./routes/analyticsRoute');
+const authRoute = require('./routes/authRoute');
+const categoryRoute = require('./routes/categoryRoute');
+const customerRoute = require('./routes/customerRoute');
+const expenseRoute = require('./routes/expenseRoute');
+const inventoryRoute = require('./routes/inventoryRoute');
+const notificationRoute = require('./routes/notificationRoute');
+const pageAccessRoute = require('./routes/page-accessRoute');
+const payRoute = require('./routes/payRoute');
+const profileRoute = require('./routes/profileRoute');
+const staffRoute = require('./routes/staffRoute');
 
 // Initialize Express App
 const app = express();
@@ -57,12 +67,23 @@ app.get('/', (req, res) => {
 });
 
 // Use Routes
-app.use('/api/supplier', supplierRoute);  // Supplier routes
-app.use('/api/invoice', invoiceRoute);    // Invoice routes
-app.use('/api/sales', salesRoute);        // Sales routes
-app.use('/api/report', reportRoute);      // Report routes
-app.use('/api/product', productRoute);    // Product routes
-app.use('/api/user', userRoute);          // User routes
+app.use('/api/supplier', supplierRoute);      // Supplier routes
+app.use('/api/invoice', invoiceRoute);        // Invoice routes
+app.use('/api/sales', salesRoute);            // Sales routes
+app.use('/api/report', reportRoute);          // Report routes
+app.use('/api/product', productRoute);        // Product routes
+app.use('/api/user', userRoute);              // User routes
+app.use('/api/analytics', analyticsRoute);    // Analytics routes
+app.use('/api/auth', authRoute);              // Authentication routes
+app.use('/api/category', categoryRoute);      // Category routes
+app.use('/api/customer', customerRoute);      // Customer routes
+app.use('/api/expense', expenseRoute);        // Expense routes
+app.use('/api/inventory', inventoryRoute);    // Inventory routes
+app.use('/api/notification', notificationRoute); // Notification routes
+app.use('/api/page-access', pageAccessRoute); // Page Access routes
+app.use('/api/pay', payRoute);                // Payment routes
+app.use('/api/profile', profileRoute);        // Profile routes
+app.use('/api/staff', staffRoute);            // Staff routes
 
 // Default error handling for undefined routes
 app.use((req, res, next) => {
@@ -77,10 +98,10 @@ app.use((err, req, res, next) => {
 
 // Sample pricing plans
 const pricingPlans = [
-    { planKey: 'basic', planName: 'Basic Plan', price: '5.00', paypalPlanId: 'P-7E210255TM029860GM5HYC4A' },
-    { planKey: 'premium', planName: 'Premium Plan', price: '15.00', paypalPlanId: 'P-7E210255TM029860GM5HYC4B' },
-    { planKey: 'enterprise', planName: 'Enterprise Plan', price: '25.00', paypalPlanId: 'P-7E210255TM029860GM5HYC4C' }
-  ];
+    { planKey: 'Starter', planName: 'Starter Plan', price: '5.00', paypalPlanId: 'P-7E210255TM029860GM5HYC4A' },
+    { planKey: 'Buisness', planName: 'Buisness Plan', price: '15.00', paypalPlanId: 'P-7E210255TM029860GM5HYC4B' },
+    { planKey: 'Enterprise', planName: 'Enterprise Plan', price: '25.00', paypalPlanId: 'P-7E210255TM029860GM5HYC4C' }
+];
 
 // Start the Server
 const port = process.env.PORT || 3000;
