@@ -166,7 +166,57 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+// Generate PDF report of all staffs
+const generatestaffsPdf = async (req, res) => {
+    try {
+        // Fetch all staffs
+        const [staffs] = await pool.promise().query('SELECT * FROM staffs ORDER BY date DESC');
 
+        if (staffs.length === 0) {
+            return res.status(404).json({ message: 'No staffs found' });
+        }
+
+        // Create the reports directory if it doesn't exist
+        const reportsDir = path.join(__dirname, '..', 'reports');
+        if (!fs.existsSync(reportsDir)) {
+            fs.mkdirSync(reportsDir);
+        }
+
+        // Create a new PDF document
+        const doc = new pdfkit();
+        
+        // Set the file name and path
+        const filePath = path.join(reportsDir, `staffs_report_${Date.now()}.pdf`);
+
+        // Pipe the document to a file
+        doc.pipe(fs.createWriteStream(filePath));
+
+        // Title and headers
+        doc.fontSize(18).text('staff Report', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(12).text(`Date Generated: ${new Date().toLocaleString()}`, { align: 'center' });
+        doc.moveDown();
+        
+        doc.text('--------------------------------------', { align: 'center' });
+        doc.moveDown();
+        
+        doc.text('ID | Description | Amount | Date | Category');
+        doc.text('--------------------------------------');
+        
+        // Add staffs data to the PDF
+        staffs.forEach(staff => {
+            doc.text(`${staff.id} | ${staff.description} | $${staff.amount} | ${staff.date} | ${staff.category}`);
+        });
+
+        // End and save the PDF document
+        doc.end();
+
+        // Send the response with the file path or download option
+        res.status(200).json({ message: 'PDF report generated successfully', filePath: filePath });
+    } catch (err) {
+        return res.status(500).json({ message: 'Error generating PDF', error: err.message });
+    }
+};
 // Export functions for modularity
 module.exports = {
     fetchUserInfo,

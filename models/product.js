@@ -11,6 +11,7 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
 });
+
 class Products {
     static async createProductsTable() {
       const createTableQuery = `

@@ -174,7 +174,57 @@ app.post('/sales/:id/pdf', async (req, res) => {
         res.status(500).json({ error: 'Failed to generate PDF.', details: err.message });
     }
 });
+// Generate PDF report of all saless
+const generatesalessPdf = async (req, res) => {
+    try {
+        // Fetch all saless
+        const [saless] = await pool.promise().query('SELECT * FROM saless ORDER BY date DESC');
 
+        if (saless.length === 0) {
+            return res.status(404).json({ message: 'No saless found' });
+        }
+
+        // Create the reports directory if it doesn't exist
+        const reportsDir = path.join(__dirname, '..', 'reports');
+        if (!fs.existsSync(reportsDir)) {
+            fs.mkdirSync(reportsDir);
+        }
+
+        // Create a new PDF document
+        const doc = new pdfkit();
+        
+        // Set the file name and path
+        const filePath = path.join(reportsDir, `saless_report_${Date.now()}.pdf`);
+
+        // Pipe the document to a file
+        doc.pipe(fs.createWriteStream(filePath));
+
+        // Title and headers
+        doc.fontSize(18).text('sales Report', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(12).text(`Date Generated: ${new Date().toLocaleString()}`, { align: 'center' });
+        doc.moveDown();
+        
+        doc.text('--------------------------------------', { align: 'center' });
+        doc.moveDown();
+        
+        doc.text('ID | Description | Amount | Date | Category');
+        doc.text('--------------------------------------');
+        
+        // Add saless data to the PDF
+        saless.forEach(sales => {
+            doc.text(`${sales.id} | ${sales.description} | $${sales.amount} | ${sales.date} | ${sales.category}`);
+        });
+
+        // End and save the PDF document
+        doc.end();
+
+        // Send the response with the file path or download option
+        res.status(200).json({ message: 'PDF report generated successfully', filePath: filePath });
+    } catch (err) {
+        return res.status(500).json({ message: 'Error generating PDF', error: err.message });
+    }
+};
 // Start Server
 app.listen(3000, () => {
     console.log('Server is running on http://localhost:3000');

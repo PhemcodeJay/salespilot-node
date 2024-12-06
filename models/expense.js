@@ -24,7 +24,9 @@ class Expenses {
         description TEXT NOT NULL,
         amount DECIMAL(10,2) NOT NULL,
         date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        category VARCHAR(255) NOT NULL
+        category VARCHAR(255) NOT NULL,
+        createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
     `;
     
@@ -49,6 +51,7 @@ class Expenses {
       const [result] = await db.query(insertExpenseQuery, [description, amount, category]);
       return { id: result.insertId }; // Returning the inserted expense ID
     } catch (error) {
+      console.error('Error creating expense:', error.message);
       throw new Error(`Error creating expense: ${error.message}`);
     }
   }
@@ -62,6 +65,7 @@ class Expenses {
       if (rows.length === 0) throw new Error('Expense not found.');
       return rows[0];
     } catch (error) {
+      console.error('Error fetching expense:', error.message);
       throw new Error(`Error fetching expense: ${error.message}`);
     }
   }
@@ -74,6 +78,7 @@ class Expenses {
       const [rows] = await db.query(query);
       return rows;
     } catch (error) {
+      console.error('Error fetching all expenses:', error.message);
       throw new Error(`Error fetching all expenses: ${error.message}`);
     }
   }
@@ -84,7 +89,7 @@ class Expenses {
 
     const updateQuery = `
       UPDATE expenses
-      SET description = ?, amount = ?, category = ?
+      SET description = ?, amount = ?, category = ?, updatedAt = CURRENT_TIMESTAMP
       WHERE id = ?
     `;
 
@@ -92,6 +97,7 @@ class Expenses {
       const [result] = await db.query(updateQuery, [description, amount, category, expenseId]);
       return result.affectedRows > 0; // Returns true if an expense was updated
     } catch (error) {
+      console.error('Error updating expense:', error.message);
       throw new Error(`Error updating expense: ${error.message}`);
     }
   }
@@ -104,6 +110,7 @@ class Expenses {
       const [result] = await db.query(deleteQuery, [expenseId]);
       return result.affectedRows > 0; // Returns true if an expense was deleted
     } catch (error) {
+      console.error('Error deleting expense:', error.message);
       throw new Error(`Error deleting expense: ${error.message}`);
     }
   }
@@ -116,6 +123,7 @@ class Expenses {
       const [rows] = await db.query(query);
       return rows[0].total_expenses;
     } catch (error) {
+      console.error('Error fetching total expenses:', error.message);
       throw new Error(`Error fetching total expenses: ${error.message}`);
     }
   }

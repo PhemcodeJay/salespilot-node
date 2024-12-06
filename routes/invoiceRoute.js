@@ -16,7 +16,7 @@ router.get('/page-invoice-form', (req, res) => {
 router.get('/page-list-invoices', async (req, res) => {
     try {
         const invoices = await invoiceController.getAllInvoices(); // Fetch all invoices
-        res.sendFile(path.join(__dirname, '../public/page-list-invoices.html')); // Serve static page for listing invoices
+        res.sendFile(path.join(__dirname, '../public/page-invoices.html')); // Serve static page for listing invoices
     } catch (err) {
         console.error("Error fetching invoices: ", err);
         res.status(500).json({ message: 'Error fetching invoices' });
@@ -32,6 +32,7 @@ router.delete('/handle-invoice-delete/:id', invoiceController.deleteInvoice); //
 router.get('/generate-invoices-pdf', invoiceController.generateInvoicesPdf);
 
 // API Routes for Invoice CRUD operations
+
 // Create Invoice Route
 router.post('/invoice', (req, res) => {
     const invoiceData = req.body.invoiceData;  // Invoice data
