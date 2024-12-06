@@ -1,10 +1,8 @@
 const express = require('express');
 const path = require('path');
 const router = express.Router();
-const { generateInvoicesPdf, createInvoice, getInvoice, updateInvoice, deleteInvoice, generateInvoicePDF } = require('./controllers/invoicecontroller');
-
-// Middleware for JWT token verification (if needed)
-const verifyToken = require('../middleware/verifyToken'); // Create this middleware if required
+const { generateInvoicesPdf, createInvoice, getInvoice, updateInvoice, deleteInvoice, generateInvoicePDF } = require('../controllers/invoicecontroller');
+const verifyToken = require('../verifyToken'); // Adjusted import path
 
 // Serve the invoice list page
 router.get('/pages-invoice', verifyToken, (req, res) => {

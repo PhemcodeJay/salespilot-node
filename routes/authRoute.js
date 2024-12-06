@@ -4,6 +4,7 @@ const authController = require('../controllers/authcontroller'); // Import the c
 
 const router = express.Router();
 
+
 // Static File Routes
 router.use(express.static(path.join(__dirname, '../public')));
 

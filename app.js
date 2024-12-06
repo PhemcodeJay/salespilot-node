@@ -13,7 +13,6 @@ const invoiceRoute = require('./routes/invoiceRoute');
 const salesRoute = require('./routes/salesRoute');
 const reportRoute = require('./routes/reportRoute');
 const productRoute = require('./routes/productRoute');
-const userRoute = require('./routes/userRoute');
 const analyticsRoute = require('./routes/analyticsRoute');
 const authRoute = require('./routes/authRoute');
 const categoryRoute = require('./routes/categoryRoute');

@@ -1,5 +1,5 @@
-const reportModel = require('./models/report'); // Import the report model
-const dayjs = require('dayjs'); // Date library
+const reportModel = require('../models/report'); // Import the report model
+const dayjs = require('day'); // Date library
 
 // Create a report
 exports.createReport = async (req, res) => {

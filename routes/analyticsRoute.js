@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const path = require('path'); // For serving static files
-const reportsController = require('./controllers/analyticscontroller');
+const reportsController = require('../controllers/analyticscontroller');
 
 // Routes for Reports
 router.post('/reports', reportsController.createReport);

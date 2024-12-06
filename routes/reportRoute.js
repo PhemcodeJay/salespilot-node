@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Reports = require('./Reports'); // Import the Reports class
+const Reports = require('../controllers/reportcontroller');
 
 // Route to create the reports table if it doesn't exist
 router.get('/create-reports-table', async (req, res) => {

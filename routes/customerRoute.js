@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const router = express.Router();
-const customerController = require('./controllers/customerController');
+const customerController = require('../controllers/customercontroller');
 const verifyToken = require('../middleware/verifyToken');
 
 // Serve static files (CSS, JS, images, etc.)
