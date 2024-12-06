@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const invoiceController = require('./controllers/invoiceController'); // Import the invoice controller
+const invoiceController = require('./controllers/invoicecontroller'); // Import the invoice controller
 
 const router = express.Router();
 
@@ -8,12 +8,12 @@ const router = express.Router();
 router.use(express.static(path.join(__dirname, '../public')));
 
 // Serve the page to add an invoice (invoice-form.html)
-router.get('/page-invoice-form', (req, res) => {
+router.get('/invoice-form', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/invoice-form.html'));
 });
 
 // Serve the page to list all invoices (page-list-invoices.html)
-router.get('/page-list-invoices', async (req, res) => {
+router.get('/page-invoices', async (req, res) => {
     try {
         const invoices = await invoiceController.getAllInvoices(); // Fetch all invoices
         res.sendFile(path.join(__dirname, '../public/page-invoices.html')); // Serve static page for listing invoices
