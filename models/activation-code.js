@@ -77,6 +77,21 @@ class ActivationCode {
     }
   }
 
+  // Validate the activation code and check for expiration
+  static async validateActivationCode(activationCode) {
+    const query = `SELECT * FROM activation_codes WHERE activation_code = ? AND expires_at > NOW()`;
+
+    try {
+      const [rows] = await db.query(query, [activationCode]);
+      if (rows.length === 0) {
+        throw new Error('Invalid or expired activation code.');
+      }
+      return rows[0]; // Return the first matching activation code record
+    } catch (error) {
+      throw new Error(`Error validating activation code: ${error.message}`);
+    }
+  }
+
   // Update an existing activation code record by ID
   static async updateActivationCode(id, updatedData) {
     const { user_id, activation_code, expires_at, created_at } = updatedData;
