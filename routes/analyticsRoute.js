@@ -24,6 +24,11 @@ const executeQuery = (query, params) => {
   });
 };
 
+// Serve 'analytics.html' page
+router.get('/analytics', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/analytics.html'));
+});
+
 // GET route to fetch data for charts
 router.get('/chart-data', async (req, res) => {
   try {

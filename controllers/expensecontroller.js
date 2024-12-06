@@ -3,7 +3,7 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 
-// Function to fetch all expenses
+// Fetch all expenses
 const getAllExpenses = async (req, res) => {
     try {
         const [results] = await db.query('SELECT * FROM expenses ORDER BY date DESC');
@@ -13,7 +13,7 @@ const getAllExpenses = async (req, res) => {
     }
 };
 
-// Function to fetch an expense by its ID
+// Fetch an expense by its ID
 const getExpenseById = async (req, res) => {
     const expenseId = req.params.id;
 
@@ -30,7 +30,7 @@ const getExpenseById = async (req, res) => {
     }
 };
 
-// Function to add a new expense
+// Add a new expense
 const addExpense = async (req, res) => {
     const { description, amount, date, category } = req.body;
 
@@ -49,7 +49,7 @@ const addExpense = async (req, res) => {
     }
 };
 
-// Function to update an existing expense
+// Update an existing expense
 const updateExpense = async (req, res) => {
     const expenseId = req.params.id;
     const { description, amount, date, category } = req.body;
@@ -74,7 +74,7 @@ const updateExpense = async (req, res) => {
     }
 };
 
-// Function to delete an expense
+// Delete an expense
 const deleteExpense = async (req, res) => {
     const expenseId = req.params.id;
 
@@ -91,7 +91,7 @@ const deleteExpense = async (req, res) => {
     }
 };
 
-// Function to get total expenses (for analytics or reporting)
+// Get total expenses (for analytics or reporting)
 const getTotalExpenses = async (req, res) => {
     try {
         const [results] = await db.query('SELECT SUM(amount) AS total_expenses FROM expenses');
@@ -101,7 +101,7 @@ const getTotalExpenses = async (req, res) => {
     }
 };
 
-// Function to generate PDF report of all expenses
+// Generate PDF report of all expenses
 const generateExpensesPdf = async (req, res) => {
     try {
         // Fetch all expenses
