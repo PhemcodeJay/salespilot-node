@@ -35,6 +35,7 @@ class Reports {
         gross_margin DECIMAL(10,2) NOT NULL,
         net_margin DECIMAL(10,2) NOT NULL,
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+        last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
         total_sales DECIMAL(10,0) NOT NULL,
         total_quantity INT(11) NOT NULL,
         total_profit DECIMAL(10,2) NOT NULL,
@@ -46,7 +47,7 @@ class Reports {
       await db.query(createTableQuery);
       console.log('Reports table created or already exists.');
     } catch (error) {
-      throw new Error(`Error creating reports table: ${error.message}`);
+      console.error(`Error creating reports table: ${error.message}`);
     }
   }
 
@@ -57,20 +58,32 @@ class Reports {
       (report_date, revenue, profit_margin, revenue_by_product, year_over_year_growth, cost_of_selling,
       inventory_turnover_rate, stock_to_sales_ratio, sell_through_rate, gross_margin_by_product, 
       net_margin_by_product, gross_margin, net_margin, total_sales, total_quantity, total_profit, total_expenses, net_profit)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-    const {
-      report_date, revenue, profit_margin, revenue_by_product, year_over_year_growth, cost_of_selling,
-      inventory_turnover_rate, stock_to_sales_ratio, sell_through_rate, gross_margin_by_product,
-      net_margin_by_product, gross_margin, net_margin, total_sales, total_quantity, total_profit, total_expenses, net_profit
-    } = reportData;
 
     try {
-      const [result] = await db.query(insertQuery, [
-        report_date, revenue, profit_margin, JSON.stringify(revenue_by_product), year_over_year_growth, cost_of_selling,
-        inventory_turnover_rate, stock_to_sales_ratio, sell_through_rate, gross_margin_by_product,
-        net_margin_by_product, gross_margin, net_margin, total_sales, total_quantity, total_profit, total_expenses, net_profit
-      ]);
+      const preparedData = [
+        reportData.report_date,
+        reportData.revenue,
+        reportData.profit_margin,
+        JSON.stringify(reportData.revenue_by_product),
+        reportData.year_over_year_growth,
+        reportData.cost_of_selling,
+        reportData.inventory_turnover_rate,
+        reportData.stock_to_sales_ratio,
+        reportData.sell_through_rate,
+        reportData.gross_margin_by_product,
+        reportData.net_margin_by_product,
+        reportData.gross_margin,
+        reportData.net_margin,
+        reportData.total_sales,
+        reportData.total_quantity,
+        reportData.total_profit,
+        reportData.total_expenses,
+        reportData.net_profit,
+      ];
+
+      const [result] = await db.query(insertQuery, preparedData);
       return { reports_id: result.insertId };
     } catch (error) {
       throw new Error(`Error creating report: ${error.message}`);
@@ -83,7 +96,9 @@ class Reports {
 
     try {
       const [rows] = await db.query(query, [reports_id]);
-      if (rows.length === 0) throw new Error('Report not found.');
+      if (rows.length === 0) {
+        throw new Error(`Report with ID ${reports_id} not found.`);
+      }
       return rows[0];
     } catch (error) {
       throw new Error(`Error fetching report: ${error.message}`);
@@ -91,11 +106,12 @@ class Reports {
   }
 
   // Get all reports
-  static async getAllReports() {
-    const query = `SELECT * FROM reports ORDER BY report_date DESC`;
+  static async getAllReports({ page = 1, limit = 10 } = {}) {
+    const offset = (page - 1) * limit;
+    const query = `SELECT * FROM reports ORDER BY report_date DESC LIMIT ? OFFSET ?`;
 
     try {
-      const [rows] = await db.query(query);
+      const [rows] = await db.query(query, [limit, offset]);
       return rows;
     } catch (error) {
       throw new Error(`Error fetching all reports: ${error.message}`);
@@ -104,27 +120,17 @@ class Reports {
 
   // Update an existing report
   static async updateReport(reports_id, updatedData) {
-    const {
-      report_date, revenue, profit_margin, revenue_by_product, year_over_year_growth, cost_of_selling,
-      inventory_turnover_rate, stock_to_sales_ratio, sell_through_rate, gross_margin_by_product,
-      net_margin_by_product, gross_margin, net_margin, total_sales, total_quantity, total_profit, total_expenses, net_profit
-    } = updatedData;
+    const keys = Object.keys(updatedData);
+    const values = Object.values(updatedData);
 
-    const updateQuery = `
-      UPDATE reports
-      SET report_date = ?, revenue = ?, profit_margin = ?, revenue_by_product = ?, year_over_year_growth = ?,
-          cost_of_selling = ?, inventory_turnover_rate = ?, stock_to_sales_ratio = ?, sell_through_rate = ?,
-          gross_margin_by_product = ?, net_margin_by_product = ?, gross_margin = ?, net_margin = ?, total_sales = ?,
-          total_quantity = ?, total_profit = ?, total_expenses = ?, net_profit = ?
-      WHERE reports_id = ?
-    `;
+    // Add reports_id to values for the WHERE clause
+    values.push(reports_id);
+
+    const setClause = keys.map((key) => `${key} = ?`).join(', ');
+    const updateQuery = `UPDATE reports SET ${setClause} WHERE reports_id = ?`;
 
     try {
-      const [result] = await db.query(updateQuery, [
-        report_date, revenue, profit_margin, JSON.stringify(revenue_by_product), year_over_year_growth, cost_of_selling,
-        inventory_turnover_rate, stock_to_sales_ratio, sell_through_rate, gross_margin_by_product,
-        net_margin_by_product, gross_margin, net_margin, total_sales, total_quantity, total_profit, total_expenses, net_profit, reports_id
-      ]);
+      const [result] = await db.query(updateQuery, values);
       return result.affectedRows > 0;
     } catch (error) {
       throw new Error(`Error updating report: ${error.message}`);

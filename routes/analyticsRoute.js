@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const moment = require('moment');
+const dayjs = require('dayjs'); // Replacing moment with day.js
 const mysql = require('mysql2');
 const path = require('path'); // For serving static files
-const reportsController = require('./controllers/analyticscontroller'); // Adjust the path if necessary
-const analyticsController = require('./controllers/analyticscontroller'); // Ensure proper path for analytics functions
+const reportsController = require('./controllers/analyticscontroller');
+const analyticsController = require('./controllers/analyticscontroller'); // Adjust path as necessary
 
 // Create a MySQL connection pool
 const pool = mysql.createPool({
@@ -32,11 +32,11 @@ const executeQuery = (query, params = []) => {
 };
 
 // Routes for Reports
-router.post('/reports', reportsController.createReport); // Create report
-router.get('/reports/:reports_id', reportsController.getReportById); // Get report by ID
-router.get('/reports', reportsController.getAllReports); // Get all reports
-router.put('/reports/:reports_id', reportsController.updateReport); // Update report
-router.delete('/reports/:reports_id', reportsController.deleteReport); // Delete report
+router.post('/reports', reportsController.createReport);
+router.get('/reports/:reports_id', reportsController.getReportById);
+router.get('/reports', reportsController.getAllReports);
+router.put('/reports/:reports_id', reportsController.updateReport);
+router.delete('/reports/:reports_id', reportsController.deleteReport);
 
 // Serve 'analytics.html' page
 router.get('/analytics', (req, res) => {
@@ -52,20 +52,20 @@ router.get('/chart-data', async (req, res) => {
     // Define date ranges based on the period
     switch (range) {
       case 'weekly':
-        startDate = moment().startOf('week').format('YYYY-MM-DD');
-        endDate = moment().endOf('week').format('YYYY-MM-DD');
+        startDate = dayjs().startOf('week').format('YYYY-MM-DD');
+        endDate = dayjs().endOf('week').format('YYYY-MM-DD');
         break;
       case 'monthly':
-        startDate = moment().startOf('month').format('YYYY-MM-DD');
-        endDate = moment().endOf('month').format('YYYY-MM-DD');
+        startDate = dayjs().startOf('month').format('YYYY-MM-DD');
+        endDate = dayjs().endOf('month').format('YYYY-MM-DD');
         break;
       case 'yearly':
-        startDate = moment().startOf('year').format('YYYY-MM-DD');
-        endDate = moment().format('YYYY-MM-DD');
+        startDate = dayjs().startOf('year').format('YYYY-MM-DD');
+        endDate = dayjs().format('YYYY-MM-DD');
         break;
       default:
-        startDate = moment().startOf('year').format('YYYY-MM-DD');
-        endDate = moment().format('YYYY-MM-DD');
+        startDate = dayjs().startOf('year').format('YYYY-MM-DD');
+        endDate = dayjs().format('YYYY-MM-DD');
     }
 
     // Fetch sales data
@@ -97,19 +97,18 @@ router.get('/chart-data', async (req, res) => {
     const revenueByProductData = await executeQuery(revenueByProductQuery, [startDate, endDate]);
 
     // Process and aggregate revenue by product data
-    let revenueByProduct = {};
-    revenueByProductData.forEach((report) => {
+    const revenueByProduct = revenueByProductData.reduce((acc, report) => {
       const products = JSON.parse(report.revenue_by_product || '[]');
-      products.forEach((product) => {
-        if (product.product_name && product.total_sales) {
-          revenueByProduct[product.product_name] =
-            (revenueByProduct[product.product_name] || 0) + parseFloat(product.total_sales);
+      products.forEach(({ product_name, total_sales }) => {
+        if (product_name && total_sales) {
+          acc[product_name] = (acc[product_name] || 0) + parseFloat(total_sales);
         }
       });
-    });
+      return acc;
+    }, {});
 
     const top5Products = Object.entries(revenueByProduct)
-      .sort((a, b) => b[1] - a[1])
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
       .map(([product_name, total_sales]) => ({ product_name, total_sales }));
 
@@ -140,9 +139,7 @@ router.get('/chart-data', async (req, res) => {
     `;
     const expenseData = await executeQuery(expenseQuery, [startDate, endDate]);
 
-    const combinedData = revenueData.map((data) => {
-      const date = data.date;
-      const revenue = parseFloat(data.revenue || 0);
+    const combinedData = revenueData.map(({ date, revenue }) => {
       const totalCost = parseFloat(totalCostData.find((item) => item.date === date)?.total_cost || 0);
       const expenses = parseFloat(expenseData.find((item) => item.date === date)?.total_expenses || 0);
       const totalExpenses = totalCost + expenses;
@@ -150,7 +147,7 @@ router.get('/chart-data', async (req, res) => {
 
       return {
         date,
-        revenue: revenue.toFixed(2),
+        revenue: parseFloat(revenue).toFixed(2),
         total_expenses: totalExpenses.toFixed(2),
         profit: profit.toFixed(2),
       };
