@@ -11,7 +11,9 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
 });
+
 class Suppliers {
+    // Create the suppliers table if it doesn't exist
     static async createSuppliersTable() {
       const createTableQuery = `
         CREATE TABLE IF NOT EXISTS suppliers (
@@ -26,10 +28,16 @@ class Suppliers {
           note TEXT NOT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
       `;
-      await db.query(createTableQuery);
-      console.log('Suppliers table created or already exists.');
+      return new Promise((resolve, reject) => {
+        pool.query(createTableQuery, (err, result) => {
+          if (err) return reject(new Error(`Error creating table: ${err.message}`));
+          console.log('Suppliers table created or already exists.');
+          resolve(result);
+        });
+      });
     }
   
+    // Create a new supplier
     static async createSupplier(supplierData) {
       const insertSupplierQuery = `
         INSERT INTO suppliers (supplier_name, supplier_email, supplier_phone, supplier_location, product_name, supply_qty, note)
@@ -37,37 +45,40 @@ class Suppliers {
       `;
       const { supplier_name, supplier_email, supplier_phone, supplier_location, product_name, supply_qty, note } = supplierData;
   
-      try {
-        const [result] = await db.query(insertSupplierQuery, [supplier_name, supplier_email, supplier_phone, supplier_location, product_name, supply_qty, note]);
-        return { supplier_id: result.insertId };
-      } catch (error) {
-        throw new Error(`Error creating supplier: ${error.message}`);
-      }
+      return new Promise((resolve, reject) => {
+        pool.query(insertSupplierQuery, [supplier_name, supplier_email, supplier_phone, supplier_location, product_name, supply_qty, note], (err, result) => {
+          if (err) return reject(new Error(`Error creating supplier: ${err.message}`));
+          resolve({ supplier_id: result.insertId });
+        });
+      });
     }
   
+    // Get a supplier by ID
     static async getSupplierById(supplier_id) {
       const query = `SELECT * FROM suppliers WHERE supplier_id = ?`;
   
-      try {
-        const [rows] = await db.query(query, [supplier_id]);
-        if (rows.length === 0) throw new Error('Supplier not found.');
-        return rows[0];
-      } catch (error) {
-        throw new Error(`Error fetching supplier: ${error.message}`);
-      }
+      return new Promise((resolve, reject) => {
+        pool.query(query, [supplier_id], (err, rows) => {
+          if (err) return reject(new Error(`Error fetching supplier: ${err.message}`));
+          if (rows.length === 0) return reject(new Error('Supplier not found.'));
+          resolve(rows[0]);
+        });
+      });
     }
   
+    // Get all suppliers
     static async getAllSuppliers() {
       const query = `SELECT * FROM suppliers ORDER BY created_at DESC`;
   
-      try {
-        const [rows] = await db.query(query);
-        return rows;
-      } catch (error) {
-        throw new Error(`Error fetching all suppliers: ${error.message}`);
-      }
+      return new Promise((resolve, reject) => {
+        pool.query(query, (err, rows) => {
+          if (err) return reject(new Error(`Error fetching all suppliers: ${err.message}`));
+          resolve(rows);
+        });
+      });
     }
   
+    // Update a supplier
     static async updateSupplier(supplier_id, updatedData) {
       const { supplier_name, supplier_email, supplier_phone, supplier_location, product_name, supply_qty, note } = updatedData;
   
@@ -77,25 +88,25 @@ class Suppliers {
         WHERE supplier_id = ?
       `;
       
-      try {
-        const [result] = await db.query(updateQuery, [supplier_name, supplier_email, supplier_phone, supplier_location, product_name, supply_qty, note, supplier_id]);
-        return result.affectedRows > 0;
-      } catch (error) {
-        throw new Error(`Error updating supplier: ${error.message}`);
-      }
+      return new Promise((resolve, reject) => {
+        pool.query(updateQuery, [supplier_name, supplier_email, supplier_phone, supplier_location, product_name, supply_qty, note, supplier_id], (err, result) => {
+          if (err) return reject(new Error(`Error updating supplier: ${err.message}`));
+          resolve(result.affectedRows > 0);
+        });
+      });
     }
   
+    // Delete a supplier by ID
     static async deleteSupplier(supplier_id) {
       const deleteQuery = `DELETE FROM suppliers WHERE supplier_id = ?`;
   
-      try {
-        const [result] = await db.query(deleteQuery, [supplier_id]);
-        return result.affectedRows > 0;
-      } catch (error) {
-        throw new Error(`Error deleting supplier: ${error.message}`);
-      }
+      return new Promise((resolve, reject) => {
+        pool.query(deleteQuery, [supplier_id], (err, result) => {
+          if (err) return reject(new Error(`Error deleting supplier: ${err.message}`));
+          resolve(result.affectedRows > 0);
+        });
+      });
     }
-  }
-  
-  module.exports = Suppliers;
-  
+}
+
+module.exports = Suppliers;

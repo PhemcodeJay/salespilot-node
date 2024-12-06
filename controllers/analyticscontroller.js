@@ -1,36 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const dayjs = require('dayjs'); // Lightweight date library
-const mysql = require('mysql2');
 const path = require('path'); // Path module for serving static files
-
-// Create a MySQL connection pool
-const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: '', // Your DB password
-  database: 'dbs13455438',
-});
-
-// Helper function to execute queries
-const executeQuery = (query, params) => {
-  return new Promise((resolve, reject) => {
-    pool.execute(query, params, (err, results) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(results);
-      }
-    });
-  });
-};
+const reportModel = require('./models/report'); // Import the report model
 
 // Routes for Reports
-router.post('/reports', reportsController.createReport); // Create report
-router.get('/reports/:reports_id', reportsController.getReportById); // Get report by ID
-router.get('/reports', reportsController.getAllReports); // Get all reports
-router.put('/reports/:reports_id', reportsController.updateReport); // Update report
-router.delete('/reports/:reports_id', reportsController.deleteReport); // Delete report
+router.post('/reports', reportController.createReport); // Create report
+router.get('/reports/:report_id', reportController.getReportById); // Get report by ID
+router.get('/reports', reportController.getAllReports); // Get all reports
+router.put('/reports/:report_id', reportController.updateReport); // Update report
+router.delete('/reports/:report_id', reportController.deleteReport); // Delete report
 
 // Serve 'analytics.html' page
 router.get('/analytics', (req, res) => {
@@ -61,30 +40,13 @@ router.get('/chart-data', async (req, res) => {
         break;
     }
 
-    // Fetch sales quantity data for Apex Basic Chart
-    const salesQuery = `
-      SELECT DATE_FORMAT(sale_date, '%b %y') AS date, SUM(sales_qty) AS total_sales
-      FROM sales
-      WHERE DATE(sale_date) BETWEEN ? AND ?
-      GROUP BY DATE_FORMAT(sale_date, '%b %y')`;
-    const salesData = await executeQuery(salesQuery, [startDate, endDate]);
-
-    // Fetch metrics data for Apex Line Area Chart
-    const metricsQuery = `
-      SELECT DATE_FORMAT(report_date, '%b %y') AS date,
-             AVG(sell_through_rate) AS avg_sell_through_rate,
-             AVG(inventory_turnover_rate) AS avg_inventory_turnover_rate
-      FROM reports
-      WHERE DATE(report_date) BETWEEN ? AND ?
-      GROUP BY DATE_FORMAT(report_date, '%b %y')`;
-    const metricsData = await executeQuery(metricsQuery, [startDate, endDate]);
-
-    // Fetch revenue by product for Apex 3D Pie Chart
-    const revenueByProductQuery = `
-      SELECT report_date, revenue_by_product
-      FROM reports
-      WHERE DATE(report_date) BETWEEN ? AND ?`;
-    const revenueByProductData = await executeQuery(revenueByProductQuery, [startDate, endDate]);
+    // Fetch data from the report model
+    const salesData = await reportModel.getSalesData(startDate, endDate);
+    const metricsData = await reportModel.getMetricsData(startDate, endDate);
+    const revenueByProductData = await reportModel.getRevenueByProductData(startDate, endDate);
+    const revenueData = await reportModel.getRevenueData(startDate, endDate);
+    const totalCostData = await reportModel.getTotalCostData(startDate, endDate);
+    const expenseData = await reportModel.getExpenseData(startDate, endDate);
 
     // Decode and aggregate revenue by product data
     const revenueByProduct = revenueByProductData.reduce((acc, report) => {
@@ -102,30 +64,6 @@ router.get('/chart-data', async (req, res) => {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([product_name, total_sales]) => ({ product_name, total_sales }));
-
-    // Fetch combined revenue, total cost, and expenses data for Apex 3-Column Chart
-    const revenueQuery = `
-      SELECT DATE_FORMAT(sale_date, '%b %y') AS date, SUM(sales_qty * price) AS revenue
-      FROM sales
-      JOIN products ON sales.product_id = products.id
-      WHERE DATE(sale_date) BETWEEN ? AND ?
-      GROUP BY DATE_FORMAT(sale_date, '%b %y')`;
-    const revenueData = await executeQuery(revenueQuery, [startDate, endDate]);
-
-    const totalCostQuery = `
-      SELECT DATE_FORMAT(sale_date, '%b %y') AS date, SUM(sales_qty * cost) AS total_cost
-      FROM sales
-      JOIN products ON sales.product_id = products.id
-      WHERE DATE(sale_date) BETWEEN ? AND ?
-      GROUP BY DATE_FORMAT(sale_date, '%b %y')`;
-    const totalCostData = await executeQuery(totalCostQuery, [startDate, endDate]);
-
-    const expenseQuery = `
-      SELECT DATE_FORMAT(expense_date, '%b %y') AS date, SUM(amount) AS total_expenses
-      FROM expenses
-      WHERE DATE(expense_date) BETWEEN ? AND ?
-      GROUP BY DATE_FORMAT(expense_date, '%b %y')`;
-    const expenseData = await executeQuery(expenseQuery, [startDate, endDate]);
 
     // Combine revenue, total cost, and expenses for 3-Column Chart
     const combinedData = revenueData.map(data => {

@@ -33,6 +33,7 @@ router.get('/page-add-supplier', checkLogin, (req, res) => {
 router.post('/supplier', checkLogin, (req, res) => {
     const { supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty } = req.body;
 
+    // Validation
     if (!supplier_name || !product_name || !supply_qty) {
         return res.status(400).json({ message: 'Supplier name, product name, and supply quantity are required.' });
     }
@@ -63,6 +64,7 @@ router.post('/supplier/action', checkLogin, (req, res) => {
             res.json({ success: true, message: 'Supplier deleted successfully' });
         });
     } else if (action === 'update') {
+        // Validation for update action
         if (!supplier_name || !supplier_email || !supplier_phone || !supplier_location) {
             return res.status(400).json({ message: 'All supplier fields are required to update.' });
         }
@@ -98,16 +100,23 @@ router.get('/supplier/pdf/:supplier_id', checkLogin, (req, res) => {
         res.setHeader('Content-Type', 'application/pdf');
         pdf.pipe(res);
         
+        // PDF Generation
         pdf.addPage();
-        pdf.setFont('Arial', 'B', 16);
+        pdf.setFont('Helvetica-Bold', 16);
         pdf.text('Supplier Details', 100, 100);
         
-        pdf.setFont('Arial', '', 12);
+        pdf.setFont('Helvetica', 12);
         pdf.text(`Name: ${supplierData.supplier_name}`, 100, 130);
         pdf.text(`Email: ${supplierData.supplier_email}`, 100, 150);
         pdf.text(`Phone: ${supplierData.supplier_phone}`, 100, 170);
         pdf.text(`Location: ${supplierData.supplier_location}`, 100, 190);
+        pdf.text(`Product: ${supplierData.product_name}`, 100, 210);
+        pdf.text(`Supply Quantity: ${supplierData.supply_qty}`, 100, 230);
         
+        if (supplierData.note) {
+            pdf.text(`Note: ${supplierData.note}`, 100, 250);
+        }
+
         pdf.end();
     });
 });

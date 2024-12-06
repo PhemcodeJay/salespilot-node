@@ -3,8 +3,10 @@ const mysql = require('mysql2');
 const session = require('express-session');
 const PDFDocument = require('pdfkit');
 const path = require('path');
-const jwt = require('jsonwebtoken'); // Added for JWT functionality
+const jwt = require('jsonwebtoken');
+const fs = require('fs'); // Add fs for file system operations
 const app = express();
+const StaffModel = require('./models/staffs');
 
 // MySQL connection pool setup
 const pool = mysql.createPool({
@@ -48,40 +50,6 @@ const fetchUserInfo = (username) => {
 // Configure body parser middleware to parse POST data
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
-// Fetch inventory and report notifications with product images
-app.get('/notifications', (req, res) => {
-    if (!req.session.username) {
-        return res.status(401).send('No username found in session.');
-    }
-
-    const inventoryQuery = `
-        SELECT i.product_name, i.available_stock, i.inventory_qty, i.sales_qty, p.image_path
-        FROM inventory i
-        JOIN products p ON i.product_id = p.id
-        WHERE i.available_stock < ? OR i.available_stock > ?
-        ORDER BY i.last_updated DESC
-    `;
-    pool.query(inventoryQuery, [10, 1000], (err, inventoryNotifications) => {
-        if (err) return res.status(500).send(err.message);
-
-        const reportsQuery = `
-            SELECT JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.product_name')) AS product_name, 
-                   JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) AS revenue,
-                   p.image_path
-            FROM reports r
-            JOIN products p ON JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.product_id')) = p.id
-            WHERE JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) > ? 
-               OR JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) < ?
-            ORDER BY r.report_date DESC
-        `;
-        pool.query(reportsQuery, [10000, 1000], (err, reportsNotifications) => {
-            if (err) return res.status(500).send(err.message);
-            
-            res.json({ inventoryNotifications, reportsNotifications });
-        });
-    });
-});
 
 // Fetch user info and update session data
 app.get('/user-info', (req, res) => {
@@ -161,13 +129,8 @@ app.post('/generate-pdf', (req, res) => {
     });
 });
 
-// Start the Express server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
 // Generate PDF report of all staffs
-const generatestaffsPdf = async (req, res) => {
+const generateStaffsPdf = async (req, res) => {
     try {
         // Fetch all staffs
         const [staffs] = await pool.promise().query('SELECT * FROM staffs ORDER BY date DESC');
@@ -183,7 +146,7 @@ const generatestaffsPdf = async (req, res) => {
         }
 
         // Create a new PDF document
-        const doc = new pdfkit();
+        const doc = new PDFDocument();
         
         // Set the file name and path
         const filePath = path.join(reportsDir, `staffs_report_${Date.now()}.pdf`);
@@ -192,7 +155,7 @@ const generatestaffsPdf = async (req, res) => {
         doc.pipe(fs.createWriteStream(filePath));
 
         // Title and headers
-        doc.fontSize(18).text('staff Report', { align: 'center' });
+        doc.fontSize(18).text('Staff Report', { align: 'center' });
         doc.moveDown();
         doc.fontSize(12).text(`Date Generated: ${new Date().toLocaleString()}`, { align: 'center' });
         doc.moveDown();
@@ -200,12 +163,12 @@ const generatestaffsPdf = async (req, res) => {
         doc.text('--------------------------------------', { align: 'center' });
         doc.moveDown();
         
-        doc.text('ID | Description | Amount | Date | Category');
+        doc.text('ID | Name | Email | Phone | Position');
         doc.text('--------------------------------------');
         
-        // Add staffs data to the PDF
+        // Add staff data to the PDF
         staffs.forEach(staff => {
-            doc.text(`${staff.id} | ${staff.description} | $${staff.amount} | ${staff.date} | ${staff.category}`);
+            doc.text(`${staff.staff_id} | ${staff.staff_name} | ${staff.staff_email} | ${staff.staff_phone} | ${staff.position}`);
         });
 
         // End and save the PDF document
@@ -217,10 +180,9 @@ const generatestaffsPdf = async (req, res) => {
         return res.status(500).json({ message: 'Error generating PDF', error: err.message });
     }
 };
+
 // Export functions for modularity
 module.exports = {
     fetchUserInfo,
-    addOrUpdateStaff,
-    deleteStaff,
-    generateStaffPDF
+    generateStaffsPdf
 };

@@ -11,6 +11,99 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
 });
+const mysql = require('mysql2');
+
+// Create a MySQL connection pool
+const pool = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: '', // Your DB password
+  database: 'dbs13455438',
+});
+
+// Helper function to execute queries
+const executeQuery = (query, params) => {
+  return new Promise((resolve, reject) => {
+    pool.execute(query, params, (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(results);
+      }
+    });
+  });
+};
+
+// Fetch sales data for chart
+const getSalesData = async (startDate, endDate) => {
+  const query = `
+    SELECT DATE_FORMAT(sale_date, '%b %y') AS date, SUM(sales_qty) AS total_sales
+    FROM sales
+    WHERE DATE(sale_date) BETWEEN ? AND ?
+    GROUP BY DATE_FORMAT(sale_date, '%b %y')`;
+  return await executeQuery(query, [startDate, endDate]);
+};
+
+// Fetch metrics data for chart
+const getMetricsData = async (startDate, endDate) => {
+  const query = `
+    SELECT DATE_FORMAT(report_date, '%b %y') AS date,
+           AVG(sell_through_rate) AS avg_sell_through_rate,
+           AVG(inventory_turnover_rate) AS avg_inventory_turnover_rate
+    FROM reports
+    WHERE DATE(report_date) BETWEEN ? AND ?
+    GROUP BY DATE_FORMAT(report_date, '%b %y')`;
+  return await executeQuery(query, [startDate, endDate]);
+};
+
+// Fetch revenue by product data for chart
+const getRevenueByProductData = async (startDate, endDate) => {
+  const query = `
+    SELECT report_date, revenue_by_product
+    FROM reports
+    WHERE DATE(report_date) BETWEEN ? AND ?`;
+  return await executeQuery(query, [startDate, endDate]);
+};
+
+// Fetch combined revenue, total cost, and expenses data for chart
+const getRevenueData = async (startDate, endDate) => {
+  const query = `
+    SELECT DATE_FORMAT(sale_date, '%b %y') AS date, SUM(sales_qty * price) AS revenue
+    FROM sales
+    JOIN products ON sales.product_id = products.id
+    WHERE DATE(sale_date) BETWEEN ? AND ?
+    GROUP BY DATE_FORMAT(sale_date, '%b %y')`;
+  return await executeQuery(query, [startDate, endDate]);
+};
+
+const getTotalCostData = async (startDate, endDate) => {
+  const query = `
+    SELECT DATE_FORMAT(sale_date, '%b %y') AS date, SUM(sales_qty * cost) AS total_cost
+    FROM sales
+    JOIN products ON sales.product_id = products.id
+    WHERE DATE(sale_date) BETWEEN ? AND ?
+    GROUP BY DATE_FORMAT(sale_date, '%b %y')`;
+  return await executeQuery(query, [startDate, endDate]);
+};
+
+const getExpenseData = async (startDate, endDate) => {
+  const query = `
+    SELECT DATE_FORMAT(expense_date, '%b %y') AS date, SUM(amount) AS total_expenses
+    FROM expenses
+    WHERE DATE(expense_date) BETWEEN ? AND ?
+    GROUP BY DATE_FORMAT(expense_date, '%b %y')`;
+  return await executeQuery(query, [startDate, endDate]);
+};
+
+// Export all the model functions
+module.exports = {
+  getSalesData,
+  getMetricsData,
+  getRevenueByProductData,
+  getRevenueData,
+  getTotalCostData,
+  getExpenseData
+};
 
 // Promisify the pool for async/await support
 const db = pool.promise();

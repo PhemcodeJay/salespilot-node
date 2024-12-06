@@ -4,15 +4,18 @@ const PDFDocument = require('pdfkit');
 const router = express.Router();
 const path = require('path');
 
-// MySQL connection setup
-const db = mysql.createConnection({
+// MySQL connection setup using pool for better performance and management
+const db = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
 });
 
-// Middleware to check if user is logged in
+// Middleware to check if the user is logged in
 function checkSession(req, res, next) {
     if (!req.session.username) {
         return res.status(401).send('No username found in session.');
@@ -38,7 +41,7 @@ router.post('/staff', checkSession, (req, res) => {
 
         db.execute(query, params, (err, result) => {
             if (err) return res.status(500).send(err.message);
-            res.redirect('/page-list-staffs.html');
+            res.redirect('/page-list-staffs');
         });
     }
 
@@ -83,12 +86,12 @@ router.post('/generate-pdf', checkSession, (req, res) => {
 });
 
 // Route for the add staff page
-router.get('/page-add-staffs', (req, res) => {
+router.get('/page-add-staffs', checkSession, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'page-add-staffs.html'));
 });
 
 // Route for the list staff page
-router.get('/page-list-staffs', (req, res) => {
+router.get('/page-list-staffs', checkSession, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'page-list-staffs.html'));
 });
 
