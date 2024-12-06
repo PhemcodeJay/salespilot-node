@@ -4,7 +4,7 @@ const dayjs = require('dayjs'); // Replacing moment with day.js
 const mysql = require('mysql2');
 const path = require('path'); // For serving static files
 const reportsController = require('./controllers/analyticscontroller');
-const analyticsController = require('./controllers/analyticscontroller'); // Adjust path as necessary
+
 
 // Create a MySQL connection pool
 const pool = mysql.createPool({
