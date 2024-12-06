@@ -17,7 +17,7 @@ router.get('/add-customer', verifyToken, (req, res) => {
 // Serve the 'page-list-customer.html' page to list all customers
 router.get('/list-customer', verifyToken, async (req, res) => {
     try {
-        const customers = await customerController.getAllCustomers(); // Make sure the method is 'getAllCustomers' (fixed typo)
+        const customers = await customerController.fetchAllCustomers(); // Using the fetchAllCustomers method
         res.render('page-list-customer', { customers }); // This assumes you're using a view engine like EJS, Pug, etc.
     } catch (err) {
         console.error("Error fetching customers: ", err);

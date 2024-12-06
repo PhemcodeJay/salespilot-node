@@ -1,23 +1,27 @@
 const mysql = require('mysql2');
 const jwt = require('jsonwebtoken');
 const PDFDocument = require('pdfkit');
-// MySQL connection setup
-const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-});
+
 // MySQL connection pool setup
 const pool = mysql.createPool({
-    host: 'localhost',
-    user: 'root', // Replace with actual DB username
-    password: '', // Replace with actual DB password
-    database: 'dbs13455438',
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',  // Replace with actual DB username
+    password: process.env.DB_PASS || '',  // Replace with actual DB password
+    database: process.env.DB_NAME || 'dbs13455438',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 });
+
+// Promise-based pool query
+const query = (sql, params) => {
+    return new Promise((resolve, reject) => {
+        pool.query(sql, params, (err, results) => {
+            if (err) reject(err);
+            resolve(results);
+        });
+    });
+};
 
 // JWT token verification function
 const verifyToken = (token) => {
@@ -29,77 +33,53 @@ const verifyToken = (token) => {
 };
 
 // Fetch user details by token
-const fetchUserInfo = (username) => {
-    return new Promise((resolve, reject) => {
-        pool.query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username], (err, results) => {
-            if (err) return reject("Error fetching user info");
-            if (results.length === 0) return reject("User not found.");
-            resolve(results[0]);
-        });
-    });
+const fetchUserInfo = async (username) => {
+    const results = await query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username]);
+    if (results.length === 0) throw new Error("User not found.");
+    return results[0];
 };
 
 // Fetch all customers
-const fetchAllCustomers = () => {
-    return new Promise((resolve, reject) => {
-        pool.query('SELECT customer_id, customer_name, customer_email, customer_phone, customer_location FROM customers', (err, results) => {
-            if (err) return reject("Error fetching customers");
-            resolve(results);
-        });
-    });
+const fetchAllCustomers = async () => {
+    const results = await query('SELECT customer_id, customer_name, customer_email, customer_phone, customer_location FROM customers');
+    return results;
 };
 
 // Add a new customer
-const addCustomer = (customer_name, customer_email, customer_phone, customer_location) => {
-    return new Promise((resolve, reject) => {
-        pool.query('INSERT INTO customers (customer_name, customer_email, customer_phone, customer_location) VALUES (?, ?, ?, ?)', 
-        [customer_name, customer_email, customer_phone, customer_location], (err, results) => {
-            if (err) return reject("Error adding customer");
-            resolve({ id: results.insertId });
-        });
-    });
+const addCustomer = async (customer_name, customer_email, customer_phone, customer_location) => {
+    const result = await query('INSERT INTO customers (customer_name, customer_email, customer_phone, customer_location) VALUES (?, ?, ?, ?)', 
+        [customer_name, customer_email, customer_phone, customer_location]);
+    return { id: result.insertId };
 };
 
 // Update an existing customer
-const updateCustomer = (customer_id, customer_name, customer_email, customer_phone, customer_location) => {
-    return new Promise((resolve, reject) => {
-        pool.query('UPDATE customers SET customer_name = ?, customer_email = ?, customer_phone = ?, customer_location = ? WHERE customer_id = ?',
-        [customer_name, customer_email, customer_phone, customer_location, customer_id], (err) => {
-            if (err) return reject("Error updating customer");
-            resolve({ message: "Customer updated successfully" });
-        });
-    });
+const updateCustomer = async (customer_id, customer_name, customer_email, customer_phone, customer_location) => {
+    await query('UPDATE customers SET customer_name = ?, customer_email = ?, customer_phone = ?, customer_location = ? WHERE customer_id = ?',
+        [customer_name, customer_email, customer_phone, customer_location, customer_id]);
+    return { message: "Customer updated successfully" };
 };
 
 // Delete a customer
-const deleteCustomer = (customer_id) => {
-    return new Promise((resolve, reject) => {
-        pool.query('DELETE FROM customers WHERE customer_id = ?', [customer_id], (err) => {
-            if (err) return reject("Error deleting customer");
-            resolve({ message: "Customer deleted successfully" });
-        });
-    });
+const deleteCustomer = async (customer_id) => {
+    await query('DELETE FROM customers WHERE customer_id = ?', [customer_id]);
+    return { message: "Customer deleted successfully" };
 };
 
 // Export customer details as PDF
-const exportCustomerToPDF = (customer_id) => {
-    return new Promise((resolve, reject) => {
-        pool.query('SELECT * FROM customers WHERE customer_id = ?', [customer_id], (err, results) => {
-            if (err) return reject("Error fetching customer for PDF");
-            if (results.length === 0) return reject("Customer not found");
+const exportCustomerToPDF = async (customer_id) => {
+    const results = await query('SELECT * FROM customers WHERE customer_id = ?', [customer_id]);
+    if (results.length === 0) throw new Error("Customer not found");
 
-            const customer = results[0];
-            const doc = new PDFDocument();
-            doc.fontSize(12).text(`Customer Details`, 100, 100);
-            doc.text(`Name: ${customer.customer_name}`);
-            doc.text(`Email: ${customer.customer_email}`);
-            doc.text(`Phone: ${customer.customer_phone}`);
-            doc.text(`Location: ${customer.customer_location}`);
-            doc.end();
+    const customer = results[0];
+    const doc = new PDFDocument();
+    doc.fontSize(12).text(`Customer Details`, 100, 100);
+    doc.text(`Name: ${customer.customer_name}`);
+    doc.text(`Email: ${customer.customer_email}`);
+    doc.text(`Phone: ${customer.customer_phone}`);
+    doc.text(`Location: ${customer.customer_location}`);
+    doc.end();
 
-            resolve(doc);
-        });
-    });
+    return doc;
 };
 
 // Customer Controller (CRUD operations)
@@ -107,7 +87,7 @@ exports.customerController = async (req, res) => {
     try {
         const token = req.cookies['auth_token'];
         if (!token) {
-            return res.status(403).json({ message: 'No token provided' });
+            return res.status(403).json({ message: 'Authentication token is missing' });
         }
 
         const decoded = verifyToken(token);
