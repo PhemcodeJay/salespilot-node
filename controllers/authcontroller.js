@@ -1,44 +1,36 @@
+require('dotenv').config();  // Load environment variables from .env file
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer'); // To send emails
+const nodemailer = require('nodemailer');
+const mysql = require('mysql2/promise');
 const ActivationCode = require('./models/ActivationCode');
 const PasswordReset = require('./models/PasswordReset');
 const User = require('./models/User');
 const Subscription = require('./models/Subscription');
 
-// JWT Secret Key
-const JWT_SECRET = 'your_jwt_secret_key';
-
-// MySQL connection pool setup
+// MySQL connection pool setup using environment variables
 const pool = mysql.createPool({
-    host: 'localhost',
-    user: 'root', // Replace with actual DB username
-    password: '', // Replace with actual DB password
-    database: 'dbs13455438',
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 });
 
-// MySQL connection setup
-const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-});
 // Function to send an email (can be modified based on your email service)
 const sendEmail = async (email, subject, text) => {
     const transporter = nodemailer.createTransport({
         service: 'gmail', // Use your SMTP provider here
         auth: {
-            user: 'your_email@gmail.com', // Your email
-            pass: 'your_email_password' // Your email password or an App Password
+            user: process.env.EMAIL_USER, // Your email from .env
+            pass: process.env.EMAIL_PASS  // Your email password from .env or App Password
         }
     });
 
     await transporter.sendMail({
-        from: 'your_email@gmail.com', // Your email
+        from: process.env.EMAIL_USER, // Your email from .env
         to: email,
         subject: subject,
         text: text
@@ -220,7 +212,7 @@ exports.login = async (req, res) => {
             return res.status(403).json({ message: 'Account is not activated.' });
         }
 
-        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
         res.json({ message: 'Login successful.', token });
     } catch (error) {
         res.status(500).json({ message: 'Server error.', error: error.message });
