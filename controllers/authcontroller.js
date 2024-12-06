@@ -1,15 +1,34 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const ActivationCode = require('./models/ActivationCode'); // Path to ActivationCode model
-const PasswordReset = require('./models/PasswordReset'); // Path to PasswordReset model
-const User = require('./models/User'); // Path to User model
-const Subscription = require('./models/Subscription'); // Path to Subscription model
+const nodemailer = require('nodemailer'); // To send emails
+const ActivationCode = require('./models/ActivationCode');
+const PasswordReset = require('./models/PasswordReset');
+const User = require('./models/User');
+const Subscription = require('./models/Subscription');
 
 // JWT Secret Key
 const JWT_SECRET = 'your_jwt_secret_key';
 
-// Login
-exports.login = async (req, res) => {
+// Function to send an email (can be modified based on your email service)
+const sendEmail = async (email, subject, text) => {
+    const transporter = nodemailer.createTransport({
+        service: 'gmail', // Use your SMTP provider here
+        auth: {
+            user: 'your_email@gmail.com', // Your email
+            pass: 'your_email_password' // Your email password or an App Password
+        }
+    });
+
+    await transporter.sendMail({
+        from: 'your_email@gmail.com', // Your email
+        to: email,
+        subject: subject,
+        text: text
+    });
+};
+
+// Signup
+exports.signup = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -17,23 +36,41 @@ exports.login = async (req, res) => {
     }
 
     try {
-        const user = await User.getUserByEmail(email);
-        if (!user) {
-            return res.status(401).json({ message: 'Invalid email or password.' });
+        const existingUser = await User.getUserByEmail(email);
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email is already in use.' });
         }
 
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(401).json({ message: 'Invalid email or password.' });
-        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = await User.createUser({ email, password: hashedPassword });
 
-        // Check if the user is active
-        if (!user.is_active) {
-            return res.status(403).json({ message: 'Account is not activated.' });
-        }
+        // Generate activation code and expiration time (e.g., 24 hours)
+        const activationCode = Math.random().toString(36).slice(-8).toUpperCase();
+        const expiresAt = new Date(Date.now() + 86400 * 1000); // 1-day expiration
 
-        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
-        res.json({ message: 'Login successful.', token });
+        // Store the activation code in the database
+        await ActivationCode.createActivationCode({
+            user_id: newUser.id,
+            activation_code: activationCode,
+            expires_at: expiresAt
+        });
+
+        // Create a 3-month trial subscription for the user
+        const trialExpiry = new Date(Date.now() + 3 * 30 * 24 * 60 * 60 * 1000); // 3 months from now
+        await Subscription.createSubscription({
+            user_id: newUser.id,
+            type: 'trial',
+            expires_at: trialExpiry
+        });
+
+        // Send the activation email (email sending logic)
+        const emailText = `Please activate your account using this code: ${activationCode}`;
+        await sendEmail(email, 'Account Activation', emailText);
+
+        res.json({
+            message: 'Signup successful. Please check your email for the activation code.',
+            subscriptionId: newUser.subscriptionId
+        });
     } catch (error) {
         res.status(500).json({ message: 'Server error.', error: error.message });
     }
@@ -104,7 +141,8 @@ exports.requestPasswordReset = async (req, res) => {
             expires_at: expiresAt
         });
 
-        console.log(`Reset code for ${email}: ${resetCode}`); // Replace with email sending logic
+        const emailText = `Your password reset code: ${resetCode}. It will expire in 1 hour.`;
+        await sendEmail(email, 'Password Reset Request', emailText);
 
         res.json({ message: 'Password reset requested. Check your email for the reset code.' });
     } catch (error) {
@@ -140,8 +178,8 @@ exports.resetPassword = async (req, res) => {
     }
 };
 
-// Signup
-exports.signup = async (req, res) => {
+// Login
+exports.login = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -149,34 +187,23 @@ exports.signup = async (req, res) => {
     }
 
     try {
-        const existingUser = await User.getUserByEmail(email);
-        if (existingUser) {
-            return res.status(400).json({ message: 'Email is already in use.' });
+        const user = await User.getUserByEmail(email);
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid email or password.' });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = await User.createUser({ email, password: hashedPassword });
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid email or password.' });
+        }
 
-        // Generate activation code and expiration time (e.g., 24 hours)
-        const activationCode = Math.random().toString(36).slice(-8).toUpperCase();
-        const expiresAt = new Date(Date.now() + 86400 * 1000); // 1-day expiration
+        // Check if the user is active
+        if (!user.is_active) {
+            return res.status(403).json({ message: 'Account is not activated.' });
+        }
 
-        // Store the activation code in the database
-        await ActivationCode.createActivationCode({
-            user_id: newUser.id,
-            activation_code: activationCode,
-            expires_at: expiresAt
-        });
-
-        console.log(`Activation code for ${email}: ${activationCode}`); // Replace with email sending logic
-
-        // Send the activation email (this can be done with an email service)
-        // Replace this with actual email sending logic
-
-        res.json({
-            message: 'Signup successful. Please check your email for the activation code.',
-            subscriptionId: newUser.subscriptionId
-        });
+        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1h' });
+        res.json({ message: 'Login successful.', token });
     } catch (error) {
         res.status(500).json({ message: 'Server error.', error: error.message });
     }

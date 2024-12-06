@@ -1,232 +1,147 @@
 const mysql = require('mysql2');
-const express = require('express');
-const router = express.Router();
 const moment = require('moment');
-const { validationResult } = require('express-validator');
-
-// MySQL connection setup
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-});
 
 // Create a MySQL connection pool
 const pool = mysql.createPool({
   host: 'localhost',
-  user: 'root', // Replace with actual DB username
-  password: 'your-db-password', // Replace with actual DB password
-  database: 'salespilot',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+  user: 'root',
+  password: '', // Your DB password
+  database: 'salespilot'
 });
 
-// Middleware to check if user is logged in
-function checkUserLoggedIn(req, res, next) {
-  if (!req.session.username) {
-    return res.status(401).json({ error: "No username found in session." });
-  }
-  next();
-}
+// Helper function to execute queries
+const executeQuery = (query, params) => {
+  return new Promise((resolve, reject) => {
+    pool.execute(query, params, (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(results);
+      }
+    });
+  });
+};
 
-// Get user information
-async function getUserInfo(username) {
-  try {
-    const [rows] = await connection.promise().query('SELECT username, email, date FROM users WHERE username = ?', [username]);
-    if (rows.length === 0) {
-      throw new Error('User not found');
-    }
-    return rows[0];
-  } catch (error) {
-    throw error;
-  }
-}
+module.exports = {
+  getData: async (req, res) => {
+    try {
+      const range = req.query.range || 'yearly';
+      let startDate = '';
+      let endDate = '';
 
-// Fetch inventory notifications
-async function getInventoryNotifications() {
-  try {
-    const [rows] = await connection.promise().query(`
-      SELECT i.product_name, i.available_stock, i.inventory_qty, i.sales_qty, p.image_path
-      FROM inventory i
-      JOIN products p ON i.product_id = p.id
-      WHERE i.available_stock < ? OR i.available_stock > ?
-      ORDER BY i.last_updated DESC
-    `, [10, 1000]);
-    return rows;
-  } catch (error) {
-    throw error;
-  }
-}
+      // Define the date range based on the selected period
+      switch (range) {
+        case 'weekly':
+          startDate = moment().startOf('week').format('YYYY-MM-DD');
+          endDate = moment().endOf('week').format('YYYY-MM-DD');
+          break;
+        case 'monthly':
+          startDate = moment().startOf('month').format('YYYY-MM-DD');
+          endDate = moment().endOf('month').format('YYYY-MM-DD');
+          break;
+        case 'yearly':
+          startDate = moment().startOf('year').format('YYYY-MM-DD');
+          endDate = moment().format('YYYY-MM-DD');
+          break;
+        default:
+          startDate = moment().startOf('year').format('YYYY-MM-DD');
+          endDate = moment().format('YYYY-MM-DD');
+          break;
+      }
 
-// Fetch reports notifications
-async function getReportsNotifications() {
-  try {
-    const [rows] = await connection.promise().query(`
-      SELECT JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.product_name')) AS product_name, 
-             JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) AS revenue,
-             p.image_path
-      FROM reports r
-      JOIN products p ON JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.product_id')) = p.id
-      WHERE JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) > ? 
-         OR JSON_UNQUOTE(JSON_EXTRACT(revenue_by_product, '$.revenue')) < ?
-      ORDER BY r.report_date DESC
-    `, [10000, 1000]);
-    return rows;
-  } catch (error) {
-    throw error;
-  }
-}
+      // Fetch sales quantity data for Apex Basic Chart
+      const salesQuery = `SELECT DATE_FORMAT(sale_date, '%b %y') AS date, SUM(sales_qty) AS total_sales
+                          FROM sales
+                          WHERE DATE(sale_date) BETWEEN ? AND ?
+                          GROUP BY DATE_FORMAT(sale_date, '%b %y')`;
+      const salesData = await executeQuery(salesQuery, [startDate, endDate]);
 
-// Get product metrics for the period
-async function getProductMetrics(startDate, endDate) {
-  try {
-    const [rows] = await connection.promise().query(`
-      SELECT p.name, SUM(s.sales_qty) AS total_sales
-      FROM sales s
-      JOIN products p ON s.product_id = p.id
-      WHERE DATE(s.sale_date) BETWEEN ? AND ?
-      GROUP BY p.name
-    `, [startDate, endDate]);
-    return rows;
-  } catch (error) {
-    throw error;
-  }
-}
+      // Fetch metrics data for Apex Line Area Chart
+      const metricsQuery = `SELECT DATE_FORMAT(report_date, '%b %y') AS date,
+                                   AVG(sell_through_rate) AS avg_sell_through_rate,
+                                   AVG(inventory_turnover_rate) AS avg_inventory_turnover_rate
+                            FROM reports
+                            WHERE DATE(report_date) BETWEEN ? AND ?
+                            GROUP BY DATE_FORMAT(report_date, '%b %y')`;
+      const metricsData = await executeQuery(metricsQuery, [startDate, endDate]);
 
-// Get top 5 products by revenue
-async function getRevenueByProduct(startDate, endDate) {
-  try {
-    const [rows] = await connection.promise().query(`
-      SELECT p.name, SUM(s.sales_qty * p.price) AS revenue
-      FROM sales s
-      JOIN products p ON s.product_id = p.id
-      WHERE DATE(s.sale_date) BETWEEN ? AND ?
-      GROUP BY p.name
-      ORDER BY revenue DESC
-      LIMIT 5
-    `, [startDate, endDate]);
-    return rows;
-  } catch (error) {
-    throw error;
-  }
-}
+      // Fetch revenue by product for Apex 3D Pie Chart
+      const revenueByProductQuery = `SELECT report_date, revenue_by_product
+                                     FROM reports
+                                     WHERE DATE(report_date) BETWEEN ? AND ?`;
+      const revenueByProductData = await executeQuery(revenueByProductQuery, [startDate, endDate]);
 
-// Get inventory metrics
-async function getInventoryMetrics() {
-  try {
-    const [rows] = await connection.promise().query(`
-      SELECT p.name, i.available_stock, i.inventory_qty, i.sales_qty
-      FROM inventory i
-      JOIN products p ON i.product_id = p.id
-    `);
-    return rows;
-  } catch (error) {
-    throw error;
-  }
-}
-
-// Get revenue and expenses for the income overview
-async function getIncomeOverview(startDate, endDate) {
-  try {
-    const [revenueData] = await connection.promise().query(`
-      SELECT DATE(s.sale_date) AS date, SUM(s.sales_qty * p.price) AS revenue
-      FROM sales s
-      JOIN products p ON s.product_id = p.id
-      WHERE DATE(s.sale_date) BETWEEN ? AND ?
-      GROUP BY DATE(s.sale_date)
-    `, [startDate, endDate]);
-
-    const [totalCostData] = await connection.promise().query(`
-      SELECT DATE(sale_date) AS date, SUM(sales_qty * cost) AS total_cost
-      FROM sales
-      JOIN products ON sales.product_id = products.id
-      WHERE DATE(sale_date) BETWEEN ? AND ?
-      GROUP BY DATE(sale_date)
-    `, [startDate, endDate]);
-
-    const [expenseData] = await connection.promise().query(`
-      SELECT DATE(expense_date) AS date, SUM(amount) AS total_expenses
-      FROM expenses
-      WHERE DATE(expense_date) BETWEEN ? AND ?
-      GROUP BY DATE(expense_date)
-    `, [startDate, endDate]);
-
-    let incomeOverview = [];
-    revenueData.forEach(data => {
-      const date = data.date;
-      const revenue = parseFloat(data.revenue) || 0;
-
-      const totalCost = totalCostData.find(cost => cost.date === date)?.total_cost || 0;
-      const expenses = expenseData.find(exp => exp.date === date)?.total_expenses || 0;
-
-      const totalExpenses = totalCost + expenses;
-      const profit = revenue - totalExpenses;
-
-      incomeOverview.push({
-        date,
-        revenue: revenue.toFixed(2),
-        total_expenses: totalExpenses.toFixed(2),
-        profit: profit.toFixed(2)
+      // Decode and aggregate revenue by product data
+      let revenueByProduct = {};
+      revenueByProductData.forEach(report => {
+        const products = JSON.parse(report.revenue_by_product);
+        if (Array.isArray(products)) {
+          products.forEach(product => {
+            if (product.product_name && product.total_sales) {
+              const productName = product.product_name;
+              const totalSales = parseFloat(product.total_sales);
+              revenueByProduct[productName] = (revenueByProduct[productName] || 0) + totalSales;
+            }
+          });
+        }
       });
-    });
 
-    return incomeOverview;
-  } catch (error) {
-    throw error;
-  }
-}
+      // Sort and get the top 5 products
+      const top5Products = Object.entries(revenueByProduct)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([productName, totalSales]) => ({ product_name: productName, total_sales: totalSales }));
 
-// Define the route for handling analytics requests
-router.get('/analytics', checkUserLoggedIn, async (req, res) => {
-  try {
-    const username = req.session.username;
-    const userInfo = await getUserInfo(username);
+      // Fetch combined revenue, total cost, and expenses data for Apex 3-Column Chart
+      const revenueQuery = `SELECT DATE_FORMAT(sale_date, '%b %y') AS date, SUM(sales_qty * price) AS revenue
+                            FROM sales
+                            JOIN products ON sales.product_id = products.id
+                            WHERE DATE(sale_date) BETWEEN ? AND ?
+                            GROUP BY DATE_FORMAT(sale_date, '%b %y')`;
+      const revenueData = await executeQuery(revenueQuery, [startDate, endDate]);
 
-    // Handle the range selection for weekly, monthly, or yearly data
-    const range = req.query.range || 'yearly';
-    let startDate = '';
-    let endDate = '';
-    switch (range) {
-      case 'weekly':
-        startDate = moment().startOf('week').format('YYYY-MM-DD');
-        endDate = moment().endOf('week').format('YYYY-MM-DD');
-        break;
-      case 'monthly':
-        startDate = moment().startOf('month').format('YYYY-MM-DD');
-        endDate = moment().endOf('month').format('YYYY-MM-DD');
-        break;
-      case 'yearly':
-      default:
-        startDate = moment().startOf('year').format('YYYY-MM-DD');
-        endDate = moment().endOf('year').format('YYYY-MM-DD');
-        break;
+      const totalCostQuery = `SELECT DATE_FORMAT(sale_date, '%b %y') AS date, SUM(sales_qty * cost) AS total_cost
+                              FROM sales
+                              JOIN products ON sales.product_id = products.id
+                              WHERE DATE(sale_date) BETWEEN ? AND ?
+                              GROUP BY DATE_FORMAT(sale_date, '%b %y')`;
+      const totalCostData = await executeQuery(totalCostQuery, [startDate, endDate]);
+
+      const expenseQuery = `SELECT DATE_FORMAT(expense_date, '%b %y') AS date, SUM(amount) AS total_expenses
+                            FROM expenses
+                            WHERE DATE(expense_date) BETWEEN ? AND ?
+                            GROUP BY DATE_FORMAT(expense_date, '%b %y')`;
+      const expenseData = await executeQuery(expenseQuery, [startDate, endDate]);
+
+      // Combine revenue, total cost, and expenses for 3-Column Chart
+      const combinedData = revenueData.map(data => {
+        const date = data.date;
+        const revenue = parseFloat(data.revenue || 0);
+        const totalCost = parseFloat(totalCostData.find(item => item.date === date)?.total_cost || 0);
+        const expenses = parseFloat(expenseData.find(item => item.date === date)?.total_expenses || 0);
+        const totalExpenses = totalCost + expenses;
+        const profit = revenue - totalExpenses;
+
+        return {
+          date,
+          revenue: revenue.toFixed(2),
+          total_expenses: totalExpenses.toFixed(2),
+          profit: profit.toFixed(2)
+        };
+      });
+
+      // Return the data for the charts
+      const response = {
+        'apex-basic': salesData,
+        'apex-line-area': metricsData,
+        'am-3dpie-chart': top5Products,
+        'apex-column': combinedData
+      };
+
+      res.json(response);
+    } catch (err) {
+      console.error('Database error:', err);
+      res.status(500).json({ error: 'Failed to retrieve data.' });
     }
-
-    // Fetch all necessary data
-    const inventoryNotifications = await getInventoryNotifications();
-    const reportsNotifications = await getReportsNotifications();
-    const productMetrics = await getProductMetrics(startDate, endDate);
-    const topProducts = await getRevenueByProduct(startDate, endDate);
-    const inventoryMetrics = await getInventoryMetrics();
-    const incomeOverview = await getIncomeOverview(startDate, endDate);
-
-    // Render the response with all the data
-    res.json({
-      user: userInfo,
-      inventoryNotifications,
-      reportsNotifications,
-      productMetrics,
-      topProducts,
-      inventoryMetrics,
-      incomeOverview
-    });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
   }
-});
-
-module.exports = router;
+};

@@ -16,20 +16,26 @@ const pool = mysql.createPool({
 const db = pool.promise();
 
 class ActivationCode {
+  // Create the activation_codes table if it doesn't exist
   static async createActivationCodesTable() {
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS activation_codes (
         id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
         user_id INT(11) NOT NULL,
         activation_code VARCHAR(100) NOT NULL,
-        expires_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
-        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP()
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
     `;
-    await db.query(createTableQuery);
-    console.log('Activation Codes table created or already exists.');
+    try {
+      await db.query(createTableQuery);
+      console.log('Activation Codes table created or already exists.');
+    } catch (error) {
+      throw new Error(`Error creating table: ${error.message}`);
+    }
   }
 
+  // Insert a new activation code record into the database
   static async createActivationCodeRecord(activationData) {
     const insertQuery = `
       INSERT INTO activation_codes 
@@ -46,6 +52,7 @@ class ActivationCode {
     }
   }
 
+  // Get a single activation code record by ID
   static async getActivationCodeById(id) {
     const query = `SELECT * FROM activation_codes WHERE id = ?`;
 
@@ -58,6 +65,7 @@ class ActivationCode {
     }
   }
 
+  // Get all activation codes for a user by user_id
   static async getActivationCodesByUserId(userId) {
     const query = `SELECT * FROM activation_codes WHERE user_id = ? ORDER BY created_at DESC`;
 
@@ -69,6 +77,7 @@ class ActivationCode {
     }
   }
 
+  // Update an existing activation code record by ID
   static async updateActivationCode(id, updatedData) {
     const { user_id, activation_code, expires_at, created_at } = updatedData;
 
@@ -86,6 +95,7 @@ class ActivationCode {
     }
   }
 
+  // Delete an activation code record by ID
   static async deleteActivationCode(id) {
     const deleteQuery = `DELETE FROM activation_codes WHERE id = ?`;
 
