@@ -5,7 +5,8 @@ const bodyParser = require('body-parser');
 const router = express.Router();
 const productController = require('../controllers/productcontroller');
 const authController = require('../controllers/authcontroller');
-
+const pool = require('../models/db'); // Import the database connection
+const verifyToken = require('../verifyToken');
 
 // Create MySQL connection
 const connection = mysql.createConnection({

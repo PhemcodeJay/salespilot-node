@@ -3,7 +3,9 @@ const router = express.Router();
 const paymentController = require('../controllers/paycontroller');
 const subscriptionController = require('../controllers/subscriptioncontroller');
 const authController = require('../controllers/authcontroller');
-
+const pool = require('../models/db'); // Import the database connection
+const session = require('express-session');
+const verifyToken = require('../verifyToken');
 
 // Route to check subscription status and process payment
 router.post('/check-subscription', paymentController.checkSubscriptionAndProcessPayment);

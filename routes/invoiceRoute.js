@@ -1,11 +1,14 @@
 const express = require('express');
 const path = require('path');
+const multer = require('multer');
 const router = express.Router();
 const { generateInvoicesPdf, createInvoice, getInvoice, updateInvoice, deleteInvoice, generateInvoicePDF } = require('../controllers/invoicecontroller');
 const verifyToken = require('../verifyToken'); // Adjusted import path
 const invoiceController = require('../controllers/invoicecontroller');
 const authController = require('../controllers/authcontroller');
-
+const pool = require('../models/db'); // Import the database connection
+const session = require('express-session');
+const PDFDocument = require('pdfkit');
 
 // Serve the invoice list page
 router.get('/pages-invoice', verifyToken, (req, res) => {

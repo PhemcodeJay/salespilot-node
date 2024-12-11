@@ -2,7 +2,7 @@ const db = require('../config/db'); // Assuming `db` is configured for your MySQ
 const session = require('express-session');
 const dayjs = require('day'); // Day.js for date handling
 const salesModel = require('../models/sales');
-const inventoryModel = require('../models/invenotory');
+const inventoryModel = require('../models/inventory');
 const productModel = require('../models/product');
 const userModel = require('../models/user');
 
@@ -165,8 +165,9 @@ function getDateRange(range) {
   return { startDate, endDate };
 }
 
+
 // Set up the API endpoint
-app.get('/api/data', (req, res) => {
+app.get('/dashboard', (req, res) => {
   const range = req.query.range || 'monthly';
   const { startDate, endDate } = getDateRange(range);
 

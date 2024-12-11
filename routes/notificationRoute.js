@@ -3,6 +3,9 @@ const router = express.Router();
 const mysql = require('mysql2');
 const notificationController = require('../controllers/notificationcontroller');
 const authController = require('../controllers/authcontroller');
+const pool = require('../models/db'); // Import the database connection
+const session = require('express-session');
+const verifyToken = require('../verifyToken');
 
 // Setup MySQL connection
 const pool = mysql.createPool({

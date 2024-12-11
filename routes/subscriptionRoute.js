@@ -3,8 +3,10 @@ const { checkSubscriptionAndProcessPayment, getPaymentsByUser, getPaymentById, u
 const { checkAndDeactivateSubscriptions } = require('../controllers/subscriptioncontroller');
 const proileController = require('../controllers/profilecontroller');
 const authController = require('../controllers/authcontroller');
-
+const pool = require('../models/db'); // Import the database connection
 const router = express.Router();
+const session = require('express-session');
+const verifyToken = require('../verifyToken');
 
 // Route to check the subscription status and process payment
 router.post('/process-payment', checkSubscriptionAndProcessPayment);

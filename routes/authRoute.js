@@ -2,7 +2,9 @@ const express = require('express');
 const path = require('path');
 const authController = require('../controllers/authcontroller'); // Import the controller
 const router = express.Router();
-
+const session = require('express-session');
+const pool = require('../models/db'); // Import the database connection
+const verifyToken = require('../verifyToken');
 
 // Static File Routes
 router.use(express.static(path.join(__dirname, '../public')));

@@ -1,12 +1,16 @@
 const express = require('express');
 const mysql = require('mysql2');
 const PDFDocument = require('pdfkit');
+const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const productController = require('../controllers/productcontroller');
 const authController = require('../controllers/authcontroller');
 const salesController = require('../controllers/salescontroller');
 const router = express.Router();
+const pool = require('../models/db'); // Import the database connection
+const session = require('express-session');
+const verifyToken = require('../verifyToken');
 
 // MySQL connection setup
 const connection = mysql.createConnection({

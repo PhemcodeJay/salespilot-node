@@ -5,6 +5,10 @@ const router = express.Router();
 const path = require('path');
 const authController = require('../controllers/authcontroller');
 const staffController = require('../controllers/staffcontroller');
+const pool = require('../models/db'); // Import the database connection
+const session = require('express-session');
+const verifyToken = require('../verifyToken');
+const multer = require('multer');
 
 // MySQL connection setup using pool for better performance and management
 const db = mysql.createPool({

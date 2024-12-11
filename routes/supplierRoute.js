@@ -4,6 +4,10 @@ const pdfkit = require('pdfkit'); // PDF generation
 const supplierController = require('../controllers/suppliercontroller');
 const authController = require('../controllers/authcontroller');
 const router = express.Router();
+const pool = require('../models/db'); // Import the database connection
+const session = require('express-session');
+const verifyToken = require('../verifyToken');
+const multer = require('multer');
 
 // MySQL connection setup
 const db = mysql.createConnection({

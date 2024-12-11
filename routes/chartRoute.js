@@ -3,6 +3,11 @@ const router = express.Router();
 const path = require('path'); // For serving static files
 const chartController = require('../controllers/chartcontroller');
 const authController = require('../controllers/authcontroller');
+const pool = require('../models/db'); // Import the database connection
+const session = require('express-session');
+const verifyToken = require('../verifyToken');
+const PDFDocument = require('pdfkit');
+const multer = require('multer');
 
 // Routes for Reports
 router.post('/reports', reportsController.createReport);
