@@ -11,6 +11,22 @@ const productModel = require('../models/product');
 const inventoryModel = require('../models/inventory');
 const userModel = require('../models/user');
 
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadsDir = path.join(__dirname, '..', 'uploads');
+        if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir);
+        }
+        cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + '-' + file.originalname);
+    }
+});
+
+const upload = multer({ storage: storage });
 
 // Generate PDF report of all Products
 const generateProductsPdf = async (req, res) => {
