@@ -4,7 +4,6 @@ const pool = require('../models/db'); // Import the database connection
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
-const pool = require('../models/db'); // Import the database connection
 const session = require('express-session');
 const verifyToken = require('../verifyToken');
 const multer = require('multer');

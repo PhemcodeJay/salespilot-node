@@ -1,10 +1,9 @@
 const express = require('express');
 const mysql = require('mysql2');
 const session = require('express-session');
-const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
-const FPDF = require('fpdf'); // PDF generation
+const PDF = require('pdfkit'); // PDF generation
 const jwt = require('jsonwebtoken');
 const userModel = require('../models/user');
 const supplierModel = require('../models/supplier');
