@@ -9,8 +9,6 @@ const profileController = require('../controllers/profilecontroller');
 const pool = require('../models/db'); // Import the database connection
 const verifyToken = require('../verifyToken');
 
-// Apply session middleware
-router.use(sessionMiddleware);
 
 // Serve dashboard.html as static from the public folder
 router.get('/api/dashboard', (req, res) => {
