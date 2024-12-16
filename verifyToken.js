@@ -16,3 +16,13 @@ module.exports = (req, res, next) => {
         res.status(400).json({ message: 'Invalid token' });
     }
 };
+require('dotenv').config();
+const jwt = require('jsonwebtoken');
+
+const SECRET_KEY = process.env.JWT_SECRET; // Load from .env
+
+const generateToken = (payload, expiresIn = '1h') => {
+    return jwt.sign(payload, SECRET_KEY, { expiresIn });
+};
+
+module.exports = { generateToken };

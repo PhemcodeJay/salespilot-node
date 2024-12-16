@@ -7,6 +7,7 @@ const path = require('path');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const router = express.Router(); // Create a router instance
+const paypalRoutes = require('./paypal');
 
 // Import Routes
 const dashboardRoutes = require('./routes/dashboardRoute');
@@ -101,7 +102,7 @@ app.use('/api/pay', payRoute);                // Payment routes
 app.use('/api/profile', profileRoute);        // Profile routes
 app.use('/api/staff', staffRoute);            // Staff routes
 app.use('/api/subscriptions', subscriptionRoute); // Use the subscription routes
-
+app.use('/paypal', paypalRoutes);
 
 // Default error handling for undefined routes
 app.use((req, res, next) => {
@@ -129,3 +130,85 @@ app.listen(port, () => {
 });
 
 module.exports = app;
+const express = require('express');
+const bodyParser = require('body-parser');
+const passport = require('passport');
+require('dotenv').config();
+const { generateToken } = require('./middleware/jwtUtils'); // JWT generation helper
+require('./config/passport')(passport); // Passport configuration
+
+const app = express();
+app.use(bodyParser.json());
+
+// Initialize Passport
+app.use(passport.initialize());
+
+// Login route to generate token
+app.post('/login', (req, res) => {
+    const { email, password } = req.body;
+    const fakeUser = { id: 1, email: 'user@example.com', password: 'password123' };
+
+    if (email === fakeUser.email && password === fakeUser.password) {
+        const token = generateToken(fakeUser); // Generate JWT
+        return res.json({ token });
+    } else {
+        return res.status(401).json({ error: 'Invalid credentials.' });
+    }
+});
+
+// Protected route
+app.get(
+    '/protected',
+    passport.authenticate('jwt', { session: false }), // Passport middleware for JWT verification
+    (req, res) => {
+        res.json({ message: `Hello, ${req.user.email}`, user: req.user });
+    }
+);
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
+const express = require('express');
+const jwt = require('jsonwebtoken');
+
+const app = express();
+app.use(express.json());
+
+const SECRET_KEY = 'your_secret_key_here'; // Replace with your secret
+
+// Login route to generate JWT
+app.post('/login', (req, res) => {
+    const { email, password } = req.body;
+
+    // Example user validation (replace with database query)
+    if (email === 'user@example.com' && password === 'password123') {
+        const token = jwt.sign({ email, role: 'admin' }, SECRET_KEY, { expiresIn: '1h' });
+        return res.json({ token });
+    }
+
+    return res.status(401).json({ error: 'Invalid credentials.' });
+});
+
+// Protected route to verify JWT
+app.get('/protected', (req, res) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Get token from Bearer header
+
+    if (!token) {
+        return res.status(401).json({ error: 'Token is required.' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, SECRET_KEY);
+        res.json({ message: 'Protected data accessed.', user: decoded });
+    } catch (err) {
+        res.status(403).json({ error: 'Invalid or expired token.' });
+    }
+});
+
+// Start the server
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
