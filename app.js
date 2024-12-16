@@ -85,9 +85,11 @@ app.use('/api/dashboard', dashboardRoutes);    // Dashboard routes
 app.use('/api/supplier', supplierRoute);      // Supplier routes
 app.use('/api/invoice', invoiceRoute);        // Invoice routes
 app.use('/api/sales', salesRoute);            // Sales routes
-app.use('/api/report', reportRoute);          // Report routes
+app.use('/api/categoryreport', categoryreportRoute);          // Report routes
+app.use('/api/productreport', productreportRoute);      
 app.use('/api/product', productRoute);        // Product routes
-app.use('/api/analytics', analyticsRoute);    // Analytics routes
+app.use('/api/chart', chartRoute);    // Analytics routes
+app.use('/api/chartreport', chartreportRoute);    // Analytics routes
 app.use('/api/auth', authRoute);              // Authentication routes
 app.use('/api/category', categoryRoute);      // Category routes
 app.use('/api/customer', customerRoute);      // Customer routes

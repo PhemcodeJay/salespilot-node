@@ -2,7 +2,7 @@ const reportModel = require('../models/report'); // Import the report model
 const dayjs = require('day'); // Date library
 const userModel = require('../models/user');
 const salesModel = require('../models/sales');
-const expensesModel = require('../models/expenses');
+const expensesModel = require('../models/expense');
 
 // Create a report
 exports.createReport = async (req, res) => {
@@ -180,10 +180,6 @@ function getDateRange(range) {
   return { startDate, endDate };
 }
 
-// Set up the API endpoint
-app.get('/api/data', (req, res) => {
-  const range = req.query.range || 'monthly';
-  const { startDate, endDate } = getDateRange(range);
 
   // Query for category revenue (Top 5 categories)
   const categoryRevenueQuery = `
@@ -196,9 +192,7 @@ app.get('/api/data', (req, res) => {
     ORDER BY revenue DESC
     LIMIT 5`;
 
-  connection.execute(categoryRevenueQuery, [startDate, endDate], (err, categoryRevenueData) => {
-    if (err) return res.status(500).json({ error: 'Database query failed' });
-
+  
     // Query for revenue and profit (for combo chart)
     const revenueProfitQuery = `
       SELECT DATE(sale_date) AS date, 
@@ -209,9 +203,7 @@ app.get('/api/data', (req, res) => {
       WHERE sale_date BETWEEN ? AND ?
       GROUP BY DATE(sale_date)`;
 
-    connection.execute(revenueProfitQuery, [startDate, endDate], (err, revenueProfitData) => {
-      if (err) return res.status(500).json({ error: 'Database query failed' });
-
+    
       // Query for profit only
       const profitQuery = `
         SELECT DATE_FORMAT(sale_date, '%b %Y') AS date,
@@ -221,9 +213,7 @@ app.get('/api/data', (req, res) => {
         WHERE sale_date BETWEEN ? AND ?
         GROUP BY DATE_FORMAT(sale_date, '%b %Y')`;
 
-      connection.execute(profitQuery, [startDate, endDate], (err, profitData) => {
-        if (err) return res.status(500).json({ error: 'Database query failed' });
-
+      
         // Query for expenses only
         const expensesQuery = `
           SELECT DATE_FORMAT(expense_date, '%b %Y') AS date,
@@ -232,9 +222,7 @@ app.get('/api/data', (req, res) => {
           WHERE expense_date BETWEEN ? AND ?
           GROUP BY DATE_FORMAT(expense_date, '%b %Y')`;
 
-        connection.execute(expensesQuery, [startDate, endDate], (err, expensesData) => {
-          if (err) return res.status(500).json({ error: 'Database query failed' });
-
+     
           // Query for profit and expenses combined
           const profitExpenseQuery = `
             SELECT DATE_FORMAT(s.sale_date, '%b %Y') AS date,
@@ -246,9 +234,7 @@ app.get('/api/data', (req, res) => {
             WHERE s.sale_date BETWEEN ? AND ?
             GROUP BY DATE_FORMAT(s.sale_date, '%b %Y')`;
 
-          connection.execute(profitExpenseQuery, [startDate, endDate], (err, profitExpenseData) => {
-            if (err) return res.status(500).json({ error: 'Database query failed' });
-
+       
             // Combine data into the final response
             const response = {
               apexLayeredColumnChart: categoryRevenueData, // Revenue by Top 5 Categories
@@ -260,12 +246,8 @@ app.get('/api/data', (req, res) => {
 
             // Send the JSON response
             res.json(response);
-          });
-        });
-      });
-    });
-  });
-});
+      
+
 
 // Helper function to execute queries
 const executeQuery = (query, params) => {
@@ -280,11 +262,6 @@ const executeQuery = (query, params) => {
   });
 };
 
-app.get('/getData', async (req, res) => {
-  try {
-    const range = req.query.range || 'yearly';
-    let startDate = '';
-    let endDate = '';
 
     // Define the date range based on the selected period
     switch (range) {
@@ -313,8 +290,7 @@ app.get('/getData', async (req, res) => {
       WHERE DATE(sale_date) BETWEEN ? AND ?
       GROUP BY DATE_FORMAT(sale_date, '%b %y')
     `;
-    const salesData = await executeQuery(salesQuery, [startDate, endDate]);
-
+    
     // Fetch sell-through rate and inventory turnover rate for Apex Line Area Chart
     const metricsQuery = `
       SELECT DATE_FORMAT(report_date, '%b %y') AS date,
@@ -324,16 +300,14 @@ app.get('/getData', async (req, res) => {
       WHERE DATE(report_date) BETWEEN ? AND ?
       GROUP BY DATE_FORMAT(report_date, '%b %y')
     `;
-    const metricsData = await executeQuery(metricsQuery, [startDate, endDate]);
-
+   
     // Fetch revenue by product for Apex 3D Pie Chart
     const revenueByProductQuery = `
       SELECT report_date, revenue_by_product
       FROM reports
       WHERE DATE(report_date) BETWEEN ? AND ?
     `;
-    const revenueByProductData = await executeQuery(revenueByProductQuery, [startDate, endDate]);
-
+   
     // Decode the revenue_by_product JSON data and aggregate it
     let revenueByProduct = {};
     revenueByProductData.forEach(report => {
@@ -363,8 +337,7 @@ app.get('/getData', async (req, res) => {
       WHERE DATE(sale_date) BETWEEN ? AND ?
       GROUP BY DATE_FORMAT(sale_date, '%b %y')
     `;
-    const revenueData = await executeQuery(revenueQuery, [startDate, endDate]);
-
+   
     const totalCostQuery = `
       SELECT DATE_FORMAT(sale_date, '%b %y') AS date, SUM(sales_qty * cost) AS total_cost
       FROM sales
@@ -372,16 +345,14 @@ app.get('/getData', async (req, res) => {
       WHERE DATE(sale_date) BETWEEN ? AND ?
       GROUP BY DATE_FORMAT(sale_date, '%b %y')
     `;
-    const totalCostData = await executeQuery(totalCostQuery, [startDate, endDate]);
-
+   
     const expenseQuery = `
       SELECT DATE_FORMAT(expense_date, '%b %y') AS date, SUM(amount) AS total_expenses
       FROM expenses
       WHERE DATE(expense_date) BETWEEN ? AND ?
       GROUP BY DATE_FORMAT(expense_date, '%b %y')
     `;
-    const expenseData = await executeQuery(expenseQuery, [startDate, endDate]);
-
+    
     // Combine revenue, total cost, and additional expenses for Apex 3-Column Chart
     const combinedData = revenueData.map(data => {
       const date = data.date;
@@ -402,7 +373,7 @@ app.get('/getData', async (req, res) => {
     });
 
     // Prepare final data for each chart
-    const response = {
+    const responses = {
       'apex-basic': salesData,
       'apex-line-area': metricsData,
       'am-3dpie-chart': top5Products,
@@ -410,8 +381,4 @@ app.get('/getData', async (req, res) => {
     };
 
     res.json(response);
-  } catch (err) {
-    console.error('Database error:', err);
-    res.status(500).json({ error: 'Failed to retrieve data.' });
-  }
-});
+  

@@ -9,19 +9,10 @@ const pool = require('../models/db'); // Import the database connection
 const verifyToken = require('../verifyToken');
 const PDFDocument = require('pdfkit');
 
-// Routes for Reports
-router.post('/reports', reportsController.createReport);
-router.get('/reports/:reports_id', reportsController.getReportById);
-router.get('/reports', reportsController.getAllReports);
-router.put('/reports/:reports_id', reportsController.updateReport);
-router.delete('/reports/:reports_id', reportsController.deleteReport);
 
 // Serve 'analytics.html' page
 router.get('/analytics', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/sales-metrics.html'));
 });
-
-// Chart data route
-router.get('/chart-data', reportsController.getChartData);
 
 module.exports = router;
