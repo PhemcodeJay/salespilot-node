@@ -32,11 +32,12 @@
     "mysql2": "^3.11.5",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.16",
-    "openai": "^4.75.0",
+    "openai": "^4.76.3",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pdfkit": "^0.15.1",
     "router": "^2.0.0",
-    "sequelize": "^6.37.5"
+    "sequelize": "^6.37.5",
+    "sequelize-cli": "^6.6.2"
   }
 }

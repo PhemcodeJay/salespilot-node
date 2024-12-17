@@ -1,52 +1,41 @@
+// Import required modules
 const express = require('express');
 const path = require('path');
 const authController = require('../controllers/authcontroller'); // Import the controller
 const router = express.Router();
 const session = require('express-session');
 const pool = require('../models/db'); // Import the database connection
-const verifyToken = require('../verifyToken');
+const verifyToken = require('../verifyToken'); // Middleware to verify JWT tokens
 
 // Static File Routes
 router.use(express.static(path.join(__dirname, '../public')));
 
-// Serve the 'signup.html' page for user registration
-router.get('/signup', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/signup.html'));
-});
-
-// Serve the 'login.html' page for user login
-router.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/login.html'));
-});
+// Serve static pages
+router.get('/signup', (req, res) => res.sendFile(path.join(__dirname, '../public/signup.html')));
+router.get('/login', (req, res) => res.sendFile(path.join(__dirname, '../public/login.html')));
+router.get('/activate', (req, res) => res.sendFile(path.join(__dirname, '../public/activate.html')));
 
 // Serve the 'recoverpwd.html' page for password recovery
 router.get('/recoverpwd', (req, res) => {
-    const csrf_token = req.session.csrf_token;  // Assuming CSRF token is stored in session
-    const reset_code = req.query.token;  // Token passed in the URL for validation
+    const { csrf_token } = req.session; // Assuming CSRF token is stored in session
+    const { token: reset_code } = req.query; // Token passed in the URL for validation
 
-    // If reset code is provided in the query, serve the 'recoverpwd.html' page
     if (reset_code && csrf_token) {
-        res.sendFile(path.join(__dirname, '../public/recoverpwd.html')); // Serve recoverpwd.html
+        res.sendFile(path.join(__dirname, '../public/recoverpwd.html'));
     } else {
         res.status(400).json({ message: 'Invalid or missing reset code or CSRF token' });
     }
 });
 
-// Serve the 'passwordreset.html' page to reset the password
+// Serve the 'passwordreset.html' page for password reset
 router.get('/passwordreset', (req, res) => {
-    const reset_code = req.query.token;  // Token passed in the URL for password reset
+    const { token: reset_code } = req.query; // Token passed in the URL for password reset
 
-    // If reset code is provided, serve the 'passwordreset.html' page
     if (reset_code) {
-        res.sendFile(path.join(__dirname, '../public/passwordreset.html')); // Serve passwordreset.html
+        res.sendFile(path.join(__dirname, '../public/passwordreset.html'));
     } else {
         res.status(400).json({ message: 'Invalid or missing reset code' });
     }
-});
-
-// Serve the 'activate.html' page for account activation
-router.get('/activate', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/activate.html'));
 });
 
 // Auth API Routes
@@ -56,9 +45,14 @@ router.post('/request-password-reset', authController.requestPasswordReset); // 
 router.post('/reset-password', authController.resetPassword); // Reset password
 router.post('/activate', authController.activateAccount); // Account activation (activation code provided in body)
 
-// Consolidated account activation route using a token from URL or body
-router.get('/activate/:token', authController.activateAccount); // Account activation via token passed in URL
-router.post('/activate/:token', authController.activateAccount); // In case token is passed in body for activation
+// Account activation via token passed in URL or body
+router.get('/activate/:token', authController.activateAccount); // Token in URL
+router.post('/activate/:token', authController.activateAccount); // Token in request body
 
-// Export the Router
+// Protect a route (Example with verifyToken middleware)
+router.get('/protected', verifyToken, (req, res) => {
+    res.json({ message: 'This is a protected route.', user: req.user });
+});
+
+// Export the router
 module.exports = router;
