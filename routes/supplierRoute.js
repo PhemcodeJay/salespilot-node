@@ -1,31 +1,23 @@
 const express = require('express');
-const mysql = require('mysql2');
-const pdfkit = require('pdfkit'); // PDF generation
+const pdfkit = require('pdfkit');
 const supplierController = require('../controllers/suppliercontroller');
 const authController = require('../controllers/authcontroller');
+const pool = require('../models/db'); // Database connection
+const verifyToken = require('../verifyToken'); // JWT Middleware
 const router = express.Router();
-const pool = require('../models/db'); // Import the database connection
-const session = require('express-session');
-const verifyToken = require('../verifyToken');
 const multer = require('multer');
 
-// MySQL connection setup
-const db = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-});
-
-// Middleware to check if the user is logged in
+// Middleware to check session login
 const checkLogin = (req, res, next) => {
     if (!req.session.username) {
-        return res.status(401).json({ message: "User not logged in" });
+        return res.status(401).json({ message: 'User not logged in' });
     }
     next();
 };
 
-// Serve static pages for supplier list and add supplier
+// ========================
+// Serve Supplier Pages
+// ========================
 router.get('/page-list-supplier', checkLogin, (req, res) => {
     res.sendFile('page-list-supplier.html', { root: './public' });
 });
@@ -34,68 +26,31 @@ router.get('/page-add-supplier', checkLogin, (req, res) => {
     res.sendFile('page-add-supplier.html', { root: './public' });
 });
 
-// Handle Supplier Insert
-router.post('/supplier', checkLogin, (req, res) => {
-    const { supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty } = req.body;
+// ========================
+// Supplier CRUD Operations
+// ========================
 
-    // Validation
-    if (!supplier_name || !product_name || !supply_qty) {
-        return res.status(400).json({ message: 'Supplier name, product name, and supply quantity are required.' });
-    }
+// Fetch all suppliers
+router.get('/suppliers', verifyToken, supplierController.getSuppliers);
 
-    db.query(`
-        INSERT INTO suppliers (supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`, 
-        [supplier_name, product_name, supplier_email, supplier_phone, supplier_location, note, supply_qty], (err, result) => {
-        
-        if (err) return res.status(500).json({ message: 'Error inserting supplier', error: err });
-        
-        res.status(201).json({ message: 'Supplier added successfully' });
-    });
-});
+// Fetch a single supplier
+router.get('/suppliers/:supplier_id', verifyToken, supplierController.getSupplierById);
 
-// Handle Supplier Update and Delete Actions
-router.post('/supplier/action', checkLogin, (req, res) => {
-    const { action, supplier_id, supplier_name, supplier_email, supplier_phone, supplier_location } = req.body;
+// Add a new supplier
+router.post('/supplier', verifyToken, multer().none(), supplierController.addSupplier);
 
-    if (!action || !supplier_id) {
-        return res.status(400).json({ message: 'Action and Supplier ID are required.' });
-    }
+// Update or delete supplier based on action
+router.post('/supplier/action', verifyToken, supplierController.handleSupplierAction);
 
-    if (action === 'delete') {
-        db.query(`DELETE FROM suppliers WHERE supplier_id = ?`, [supplier_id], (err, result) => {
-            if (err) return res.status(500).json({ message: 'Error deleting supplier', error: err });
-            
-            res.json({ success: true, message: 'Supplier deleted successfully' });
-        });
-    } else if (action === 'update') {
-        // Validation for update action
-        if (!supplier_name || !supplier_email || !supplier_phone || !supplier_location) {
-            return res.status(400).json({ message: 'All supplier fields are required to update.' });
-        }
-
-        db.query(`
-            UPDATE suppliers 
-            SET supplier_name = ?, supplier_email = ?, supplier_phone = ?, supplier_location = ?
-            WHERE supplier_id = ?`, 
-            [supplier_name, supplier_email, supplier_phone, supplier_location, supplier_id], (err, result) => {
-            
-            if (err) return res.status(500).json({ message: 'Error updating supplier', error: err });
-            
-            res.json({ success: true, message: 'Supplier updated successfully' });
-        });
-    } else {
-        res.status(400).json({ message: 'Invalid action' });
-    }
-});
-
-// Generate PDF for Supplier
-router.get('/supplier/pdf/:supplier_id', checkLogin, (req, res) => {
+// ========================
+// PDF Generation
+// ========================
+router.get('/supplier/pdf/:supplier_id', verifyToken, (req, res) => {
     const supplier_id = req.params.supplier_id;
 
-    db.query(`SELECT * FROM suppliers WHERE supplier_id = ?`, [supplier_id], (err, supplier) => {
+    pool.query(`SELECT * FROM suppliers WHERE supplier_id = ?`, [supplier_id], (err, supplier) => {
         if (err) return res.status(500).json({ message: 'Error fetching supplier details', error: err });
-        
+
         if (!supplier || supplier.length === 0) {
             return res.status(404).json({ message: 'Supplier not found' });
         }
@@ -104,35 +59,28 @@ router.get('/supplier/pdf/:supplier_id', checkLogin, (req, res) => {
         const pdf = new pdfkit();
         res.setHeader('Content-Type', 'application/pdf');
         pdf.pipe(res);
-        
-        // PDF Generation
-        pdf.addPage();
-        pdf.setFont('Helvetica-Bold', 16);
-        pdf.text('Supplier Details', 100, 100);
-        
-        pdf.setFont('Helvetica', 12);
-        pdf.text(`Name: ${supplierData.supplier_name}`, 100, 130);
-        pdf.text(`Email: ${supplierData.supplier_email}`, 100, 150);
-        pdf.text(`Phone: ${supplierData.supplier_phone}`, 100, 170);
-        pdf.text(`Location: ${supplierData.supplier_location}`, 100, 190);
-        pdf.text(`Product: ${supplierData.product_name}`, 100, 210);
-        pdf.text(`Supply Quantity: ${supplierData.supply_qty}`, 100, 230);
-        
-        if (supplierData.note) {
-            pdf.text(`Note: ${supplierData.note}`, 100, 250);
-        }
 
+        // Generate PDF content
+        pdf.fontSize(18).text('Supplier Details', { align: 'center' }).moveDown();
+        pdf.fontSize(12).text(`Name: ${supplierData.supplier_name}`);
+        pdf.text(`Email: ${supplierData.supplier_email}`);
+        pdf.text(`Phone: ${supplierData.supplier_phone}`);
+        pdf.text(`Location: ${supplierData.supplier_location}`);
+        pdf.text(`Product: ${supplierData.product_name}`);
+        pdf.text(`Supply Quantity: ${supplierData.supply_qty}`);
+        if (supplierData.note) pdf.text(`Note: ${supplierData.note}`);
         pdf.end();
     });
 });
 
-// Fetch Supplier List
-router.get('/suppliers', checkLogin, (req, res) => {
-    db.query('SELECT * FROM suppliers', (err, suppliers) => {
-        if (err) return res.status(500).json({ message: 'Error fetching suppliers', error: err });
+// ========================
+// Authentication Routes
+// ========================
+router.post('/auth/login', authController.loginUser);
+router.post('/auth/register', authController.registerUser);
+router.post('/auth/logout', verifyToken, authController.logoutUser);
 
-        res.json({ suppliers });
-    });
-});
-
+// ========================
+// Export Router
+// ========================
 module.exports = router;
