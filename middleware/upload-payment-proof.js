@@ -53,49 +53,57 @@ const transporter = nodemailer.createTransport({
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-// Route for handling file upload and payment submission
-app.post('/upload-payment-proof', upload.single('payment_proof'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ success: false, message: 'No file uploaded or there was an upload error.' });
-    }
-
+// Middleware for validating the payment method
+const validatePaymentMethod = (req, res, next) => {
     const { payment_method } = req.body;
-    const paymentProofPath = req.file.path;
-
-    // Validate payment method
     const validPaymentMethods = ['paypal', 'binance', 'mpesa', 'naira'];
     if (!validPaymentMethods.includes(payment_method)) {
         return res.status(400).json({ success: false, message: 'Invalid payment method selected.' });
     }
+    next();
+};
 
-    // Insert payment information into the database
+// Middleware for inserting payment information into the database
+const insertPaymentInfo = (req, res, next) => {
+    const { payment_method } = req.body;
+    const paymentProofPath = req.file.path;
+
     const query = 'INSERT INTO payments (payment_method, payment_proof) VALUES (?, ?)';
     connection.execute(query, [payment_method, paymentProofPath], (err, result) => {
         if (err) {
             return res.status(500).json({ success: false, message: 'Database error: ' + err.message });
         }
-
-        // Send email with the payment proof
-        const mailOptions = {
-            from: 'info@salespilot.cybertrendhub.store',
-            to: 'admin@cybertrendhub.store',
-            subject: 'New Payment Proof Uploaded',
-            html: `<p>A new payment proof has been uploaded for payment method: ${payment_method}. Please review the attached file.</p>`,
-            attachments: [{
-                filename: req.file.originalname,
-                path: paymentProofPath
-            }]
-        };
-
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                return res.status(500).json({ success: false, message: 'Email sending failed: ' + error.message });
-            }
-
-            res.json({ success: true, message: 'Payment proof uploaded and email sent successfully.' });
-        });
+        req.paymentResult = result;
+        next();
     });
-});
+};
+
+// Middleware for sending email with payment proof
+const sendPaymentEmail = (req, res) => {
+    const { payment_method } = req.body;
+    const paymentProofPath = req.file.path;
+
+    const mailOptions = {
+        from: 'info@salespilot.cybertrendhub.store',
+        to: 'admin@cybertrendhub.store',
+        subject: 'New Payment Proof Uploaded',
+        html: `<p>A new payment proof has been uploaded for payment method: ${payment_method}. Please review the attached file.</p>`,
+        attachments: [{
+            filename: req.file.originalname,
+            path: paymentProofPath
+        }]
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            return res.status(500).json({ success: false, message: 'Email sending failed: ' + error.message });
+        }
+        res.json({ success: true, message: 'Payment proof uploaded and email sent successfully.' });
+    });
+};
+
+// Route for handling file upload and payment submission
+app.post('/upload-payment-proof', upload.single('payment_proof'), validatePaymentMethod, insertPaymentInfo, sendPaymentEmail);
 
 // Start the server
 app.listen(port, () => {

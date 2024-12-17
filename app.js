@@ -5,8 +5,8 @@ const path = require('path');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const passport = require('passport');
-const paypalClient = require('./paypalConfig');
-const { generateToken, verifyToken } = require('./auth'); // JWT helper
+const paypalClient = require('./config/paypalConfig');
+const { generateToken, verifyToken } = require('./config/auth'); // JWT helper
 require('./config/passport')(passport); // Passport configuration
 
 // Initialize Express App

@@ -1,15 +1,9 @@
-// expenseRoute.js
 const express = require('express');
 const path = require('path');
-const expenseController = require('../controllers/expensecontroller');  // Adjust path if necessary
+const expenseController = require('../controllers/expensecontroller');  // Import the expense controller
 const verifyToken = require('../verifyToken');  // Import the verifyToken function
-const expenseController = require('../controllers/expensecontroller');
-const authController = require('../controllers/authcontroller');
 const router = express.Router();
-const pool = require('../models/db'); // Import the database connection
-const session = require('express-session');
-const multer = require('multer');
-const PDFDocument = require('pdfkit');
+
 // Serve static files (CSS, JS, images, etc.) from the 'public' folder
 router.use(express.static(path.join(__dirname, '../public')));
 
@@ -31,6 +25,7 @@ router.get('/list-expenses', verifyToken, async (req, res) => {
 });
 
 // Handle expense actions (e.g., save, update, delete, PDF generation)
+
 // Adding new expense
 router.post('/expense', verifyToken, expenseController.addExpense);
 

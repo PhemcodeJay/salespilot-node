@@ -34,8 +34,8 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// Handle POST requests for form submission
-app.post('/submit-form', (req, res) => {
+// Middleware for handling form submission
+const handleFormSubmission = (req, res, next) => {
     const { name, email, phone, message } = req.body;
 
     // Validate inputs
@@ -50,8 +50,7 @@ app.post('/submit-form', (req, res) => {
     if (!message) errors.push('Message is required.');
 
     if (errors.length > 0) {
-        res.status(400).send(errors);
-        return;
+        return res.status(400).send(errors);
     }
 
     // Insert data into the database
@@ -59,39 +58,52 @@ app.post('/submit-form', (req, res) => {
     db.execute(query, [name, email, phone, message], (err, results) => {
         if (err) {
             console.error('Database error: ' + err);
-            res.status(500).send('Error saving data to the database.');
-            return;
+            return res.status(500).send('Error saving data to the database.');
         }
 
-        // Send email notification
-        const mailOptions = {
-            from: '"CyberTrendHub" <admin@cybertrendhub.store>',
-            to: 'phemcodejay@gmail.com',
-            replyTo: email,
-            subject: `New Feedback Message from ${name}`,
-            text: `Name: ${name}\nEmail: ${email}\nPhone: ${phone}\nMessage:\n${message}`
-        };
-
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                console.error('Error sending email: ' + error);
-                res.status(500).send('Error sending email.');
-                return;
-            }
-
-            console.log('Email sent: ' + info.response);
-
-            // Respond to client with success message
-            res.send(`
-                <div class="alert alert-success">Thank you, ${name}! Your message has been sent.</div>
-                <script>
-                    setTimeout(function() {
-                        window.location.href = 'index.html';
-                    }, 2000); // Redirect after 2 seconds
-                </script>
-            `);
-        });
+        // Proceed to send email
+        req.contactInfo = { name, email, phone, message };
+        next();
     });
+};
+
+// Middleware for sending the email
+const sendEmailNotification = (req, res) => {
+    const { name, email, phone, message } = req.contactInfo;
+
+    const mailOptions = {
+        from: '"CyberTrendHub" <admin@cybertrendhub.store>',
+        to: 'phemcodejay@gmail.com',
+        replyTo: email,
+        subject: `New Feedback Message from ${name}`,
+        text: `Name: ${name}\nEmail: ${email}\nPhone: ${phone}\nMessage:\n${message}`
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.error('Error sending email: ' + error);
+            return res.status(500).send('Error sending email.');
+        }
+
+        console.log('Email sent: ' + info.response);
+
+        // Respond to client with success message
+        res.send(`
+            <div class="alert alert-success">Thank you, ${name}! Your message has been sent.</div>
+            <script>
+                setTimeout(function() {
+                    window.location.href = 'index.html';
+                }, 2000); // Redirect after 2 seconds
+            </script>
+        `);
+    });
+};
+
+// Route for form submission
+app.post('/submit-form', handleFormSubmission, sendEmailNotification);
+
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
-
-

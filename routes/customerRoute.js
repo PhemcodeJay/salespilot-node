@@ -4,11 +4,11 @@ const fs = require('fs');
 const router = express.Router();
 const customerController = require('../controllers/customercontroller');
 const verifyToken = require('../verifyToken');
-const authController = require('../controllers/authcontroller');
 const pool = require('../models/db'); // Import the database connection
 const session = require('express-session');
 const multer = require('multer');
 const PDFDocument = require('pdfkit');
+
 // Serve static files (CSS, JS, images, etc.)
 router.use(express.static(path.join(__dirname, '../public')));
 
@@ -68,6 +68,16 @@ router.get('/customer/pdf/:customer_id', verifyToken, async (req, res) => {
     } catch (err) {
         console.error("Error exporting PDF:", err);
         res.status(500).json({ message: 'Error exporting PDF' });
+    }
+});
+
+// Route to generate and download the customers report PDF
+router.get('/customers/report/pdf', verifyToken, async (req, res) => {
+    try {
+        await customerController.generatecustomersPdf(req, res);
+    } catch (err) {
+        console.error("Error generating report:", err);
+        res.status(500).json({ message: 'Error generating report' });
     }
 });
 

@@ -1,20 +1,31 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const productController = require('../controllers/productcontroller');
-const authController = require('../controllers/authcontroller');
-const pool = require('../models/db'); // Import the database connection
 const session = require('express-session');
 const verifyToken = require('../verifyToken');
-const PDFDocument = require('pdfkit');
+const reportController = require('../controllers/reportController');
 
+// Middleware for session handling
+router.use(session({
+  secret: 'your-secret-key', // Replace with your actual secret key
+  resave: false,
+  saveUninitialized: true,
+}));
 
-// Serve 'analytics.html' page
-router.get('/analytics', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/inventory-metrics.html'));
+// Route to generate and fetch analytics report
+router.get('/analytics', async (req, res) => {
+  try {
+    // Call the report generation logic
+    await reportController.generateReport(req, res);
+  } catch (error) {
+    console.error('Error handling analytics route:', error);
+    res.status(500).json({ error: 'Failed to generate analytics data.' });
+  }
 });
 
+// Serve 'inventory-metrics.html' page
+router.get('/inventory-metrics', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/inventory-metrics.html'));
+});
 
 module.exports = router;

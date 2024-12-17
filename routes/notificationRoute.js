@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const mysql = require('mysql2');
-const notificationController = require('../controllers/notificationcontroller');
+const notificationController = require('../controllers/notification');
 const authController = require('../controllers/authcontroller');
 const pool = require('../models/db'); // Import the database connection
 const session = require('express-session');
