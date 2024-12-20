@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const session = require('express-session');
-const verifyToken = require('../verifyToken');
-const reportController = require('../controllers/reportController');
+const verifyToken = require('../middleware/auth');
+const reportController = require('../controllers/product-reportcontroller');
 
 // Middleware for session handling
 router.use(session({

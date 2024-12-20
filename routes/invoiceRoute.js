@@ -1,26 +1,45 @@
 const express = require('express');
 const path = require('path');
-const multer = require('multer');
 const router = express.Router();
-const { generateInvoicesPdf, createInvoice, getInvoice, updateInvoice, deleteInvoice, generateInvoicePDF } = require('../controllers/invoicecontroller');
-const verifyToken = require('../verifyToken'); // Adjusted import path
-const pool = require('../models/db'); // Import the database connection
+const {
+    generateInvoicesPdf,
+    createInvoice,
+    getInvoice,
+    updateInvoice,
+    deleteInvoice,
+    generateInvoicePDF,
+} = require('../controllers/invoicecontroller');
+const { checkLogin } = require('../middleware/auth');
 
 // Serve the invoice list page
-router.get('/pages-invoice', verifyToken, (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'pages-invoice.html')); // Adjust the path to your HTML file
+router.get('/pages-invoice', checkLogin, (req, res) => {
+    const filePath = path.resolve(__dirname, '../views/invoices/pages-invoice.html'); // Correct path
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            console.error('Error sending file:', err.message);
+            res.status(500).send('Server Error: Unable to load the page.');
+        }
+    });
 });
+
 
 // Serve the invoice form page for creating or editing an invoice
-router.get('/invoice-form', verifyToken, (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'invoice-form.html')); // Adjust the path to your HTML file
+router.get('/invoice-form', checkLogin, (req, res) => {
+    const filePath = path.resolve(__dirname, '../views/invoices/invoice-form.html'); // Correct path
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            console.error('Error sending file:', err.message);
+            res.status(500).send('Server Error: Unable to load the invoice form page.');
+        }
+    });
 });
 
-// Route to generate PDF report of all invoices
-router.get('/generate-pdf', verifyToken, generateInvoicesPdf);
 
-// Route to create a new invoice
-router.post('/create', verifyToken, (req, res) => {
+// Generate a PDF report of all invoices
+router.get('/generate-pdf', checkLogin, generateInvoicesPdf);
+
+// Create a new invoice
+router.post('/create', checkLogin, (req, res) => {
     const { invoiceData, itemsData } = req.body;
     createInvoice(invoiceData, itemsData, (err, invoiceId) => {
         if (err) {
@@ -30,8 +49,8 @@ router.post('/create', verifyToken, (req, res) => {
     });
 });
 
-// Route to get a specific invoice by ID
-router.get('/:invoiceId', verifyToken, (req, res) => {
+// Get a specific invoice by ID
+router.get('/:invoiceId', checkLogin, (req, res) => {
     const invoiceId = req.params.invoiceId;
     getInvoice(invoiceId, (err, data) => {
         if (err) {
@@ -41,11 +60,11 @@ router.get('/:invoiceId', verifyToken, (req, res) => {
     });
 });
 
-// Route to update an invoice
-router.put('/:invoiceId', verifyToken, (req, res) => {
+// Update an invoice
+router.put('/:invoiceId', checkLogin, (req, res) => {
     const invoiceId = req.params.invoiceId;
     const invoiceData = req.body;
-    updateInvoice(invoiceId, invoiceData, (err, result) => {
+    updateInvoice(invoiceId, invoiceData, (err) => {
         if (err) {
             return res.status(500).json({ message: 'Error updating invoice', error: err.message });
         }
@@ -53,8 +72,8 @@ router.put('/:invoiceId', verifyToken, (req, res) => {
     });
 });
 
-// Route to delete an invoice
-router.delete('/:invoiceId', verifyToken, (req, res) => {
+// Delete an invoice
+router.delete('/:invoiceId', checkLogin, (req, res) => {
     const invoiceId = req.params.invoiceId;
     deleteInvoice(invoiceId, (err) => {
         if (err) {
@@ -64,8 +83,8 @@ router.delete('/:invoiceId', verifyToken, (req, res) => {
     });
 });
 
-// Route to generate a PDF for a single invoice
-router.get('/:invoiceId/generate-pdf', verifyToken, (req, res) => {
+// Generate a PDF for a single invoice
+router.get('/:invoiceId/generate-pdf', checkLogin, (req, res) => {
     const invoiceId = req.params.invoiceId;
     generateInvoicePDF(invoiceId, (err, filePath) => {
         if (err) {

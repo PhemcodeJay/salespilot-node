@@ -1,5 +1,5 @@
 const mysql = require('mysql2');
-const dayjs = require('dayjs');
+const dayjs = require('day');
 
 // Create a MySQL connection pool
 const pool = mysql.createPool({

@@ -21,6 +21,8 @@ const getSuppliers = (req, res) => {
     });
 };
 
+
+
 // Fetch a single supplier by ID
 const getSupplierById = (req, res) => {
     const supplierId = req.params.supplier_id;

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sessionMiddleware, generateAnalytics } = require('../controllers/analyticsController'); // Import the controller
-const verifyToken = require('../verifyToken'); // Import your token verification middleware
+const verifyToken = require('../middleware/auth'); // Import your token verification middleware
 
 // Apply session middleware for the entire router
 router.use(sessionMiddleware);

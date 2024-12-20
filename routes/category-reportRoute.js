@@ -1,29 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const path = require('path');
-const { sessionMiddleware, generateReport } = require('../controllers/productcontroller'); // Import the controller
-const verifyToken = require('../verifyToken'); // Import your token verification middleware
+const { sessionMiddleware, generateReport, handleProductUpload } = require('../controllers/productcontroller'); // Import controller functions
+const { checkLogin } = require('../middleware/auth'); // Import middleware
 
-// Apply session middleware for the entire router
-router.use(sessionMiddleware);
 
-// Serve 'analytics.html' page (this is the page for analytics metrics)
+
+// Serve the 'analytics.html' page for product category analytics
 router.get('/analytics', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/sales-metrics.html'));
+    res.sendFile(path.join(__dirname, '../public/sales-metrics.html')); // Serve the analytics page
 });
 
-// Route for generating the report
-router.post('/generate-report', verifyToken, async (req, res) => {
+// Route for generating a report
+router.post('/generate-report', checkLogin, async (req, res) => {
     try {
-        // Call the controller function to generate the report
-        await generateReport(req, res);
+        await generateReport(req, res); // Call the controller function for generating the report
     } catch (error) {
         console.error('Error in generating report:', error);
-        return res.status(500).json({ error: 'Failed to generate report' });
+        res.status(500).json({ error: 'Failed to generate report' }); // Handle errors
     }
 });
 
-// Route for any other functionality you may need to implement (like file uploads, etc.)
-// Example: router.post('/upload', multer().single('file'), (req, res) => {...});
 
-module.exports = router;
+
+module.exports = router; // Export the router to be used in other parts of the app

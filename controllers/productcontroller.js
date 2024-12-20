@@ -1,77 +1,20 @@
-const express = require('express');
-const router = express.Router();
-const multer = require('multer');
-const path = require('path');
 const fs = require('fs');
-const mysql = require('mysql2');
-const jwt = require('jsonwebtoken');
-const PDFDocument = require('pdfkit');
-const { pool } = require('../models/db'); // Assuming pool is already configured in db.js
-const productModel = require('../models/product');
-const inventoryModel = require('../models/inventory');
-const userModel = require('../models/user');
+const path = require('path');
+const { pool } = require('../models/db'); // Assuming pool is already configured
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadsDir = path.join(__dirname, '..', 'uploads');
-        if (!fs.existsSync(uploadsDir)) {
-            fs.mkdirSync(uploadsDir);
-        }
-        cb(null, uploadsDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + '-' + file.originalname);
-    }
-});
-
-const upload = multer({ storage: storage });
-
-// Generate PDF report of all Products
-const generateProductsPdf = async (req, res) => {
+// List all products
+const listProducts = async (req, res) => {
     try {
-        const [Products] = await pool.promise().query('SELECT * FROM Products ORDER BY date DESC');
-
-        if (Products.length === 0) {
-            return res.status(404).json({ message: 'No Products found' });
-        }
-
-        const reportsDir = path.join(__dirname, '..', 'reports');
-        if (!fs.existsSync(reportsDir)) {
-            fs.mkdirSync(reportsDir);
-        }
-
-        const doc = new PDFDocument();
-        const filePath = path.join(reportsDir, `Products_report_${Date.now()}.pdf`);
-
-        doc.pipe(fs.createWriteStream(filePath));
-
-        doc.fontSize(18).text('Product Report', { align: 'center' });
-        doc.moveDown();
-        doc.fontSize(12).text(`Date Generated: ${new Date().toLocaleString()}`, { align: 'center' });
-        doc.moveDown();
-        
-        doc.text('--------------------------------------', { align: 'center' });
-        doc.moveDown();
-        
-        doc.text('ID | Description | Amount | Date | Category');
-        doc.text('--------------------------------------');
-        
-        Products.forEach(Product => {
-            doc.text(`${Product.id} | ${Product.description} | $${Product.amount} | ${Product.date} | ${Product.category}`);
-        });
-
-        doc.end();
-
-        res.status(200).json({ message: 'PDF report generated successfully', filePath: filePath });
-    } catch (err) {
-        return res.status(500).json({ message: 'Error generating PDF', error: err.message });
+        const [products] = await pool.promise().query('SELECT * FROM products');
+        res.json({ success: true, products });
+    } catch (error) {
+        console.error('Error listing products:', error);
+        res.status(500).json({ success: false, message: 'Server error.' });
     }
 };
 
 // Add or update a product
-router.post('/product', upload.single('pic'), async (req, res) => {
+const addOrUpdateProduct = async (req, res) => {
     const {
         name,
         staff_name,
@@ -87,16 +30,16 @@ router.post('/product', upload.single('pic'), async (req, res) => {
 
     try {
         const sanitizedData = {
-            name: sanitizeInput(name),
-            staff_name: sanitizeInput(staff_name),
-            product_type: sanitizeInput(product_type),
-            category_name: sanitizeInput(category_name),
+            name: name.trim(),
+            staff_name: staff_name.trim(),
+            product_type: product_type.trim(),
+            category_name: category_name.trim(),
             cost: parseFloat(cost),
             price: parseFloat(price),
-            stock_qty: parseInt(stock_qty),
-            supply_qty: parseInt(supply_qty),
-            description: sanitizeInput(description),
-            new_category: sanitizeInput(new_category),
+            stock_qty: parseInt(stock_qty, 10),
+            supply_qty: parseInt(supply_qty, 10),
+            description: description.trim(),
+            new_category: new_category.trim(),
         };
 
         let category_id;
@@ -106,14 +49,14 @@ router.post('/product', upload.single('pic'), async (req, res) => {
                 [sanitizedData.new_category]
             );
 
-            if (!existingCategory) {
-                const result = await pool.promise().query(
+            if (existingCategory.length === 0) {
+                const [result] = await pool.promise().query(
                     'INSERT INTO categories (category_name) VALUES (?)',
                     [sanitizedData.new_category]
                 );
                 category_id = result.insertId;
             } else {
-                category_id = existingCategory.category_id;
+                category_id = existingCategory[0].category_id;
             }
         } else {
             const [category] = await pool.promise().query(
@@ -121,16 +64,19 @@ router.post('/product', upload.single('pic'), async (req, res) => {
                 [sanitizedData.category_name]
             );
 
-            if (!category) {
-                return res.status(404).json({ success: false, message: "Category not found." });
+            if (category.length === 0) {
+                return res.status(404).json({ success: false, message: 'Category not found.' });
             }
-            category_id = category.category_id;
+            category_id = category[0].category_id;
         }
 
         let imagePath = null;
         if (req.file) {
             imagePath = path.join(req.file.destination, req.file.filename);
-            ensureDirectoryExistence(imagePath);
+            const dir = path.dirname(imagePath);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
         }
 
         const [existingProduct] = await pool.promise().query(
@@ -138,7 +84,7 @@ router.post('/product', upload.single('pic'), async (req, res) => {
             [sanitizedData.name, category_id]
         );
 
-        if (existingProduct) {
+        if (existingProduct.length > 0) {
             await pool.promise().query(
                 `UPDATE products 
                  SET staff_name = ?, product_type = ?, cost = ?, price = ?, stock_qty = ?, 
@@ -154,7 +100,7 @@ router.post('/product', upload.single('pic'), async (req, res) => {
                     sanitizedData.description,
                     imagePath,
                     category_id,
-                    existingProduct.id,
+                    existingProduct[0].id,
                 ]
             );
         } else {
@@ -177,11 +123,45 @@ router.post('/product', upload.single('pic'), async (req, res) => {
             );
         }
 
-        res.json({ success: true, message: "Product added/updated successfully." });
+        res.json({ success: true, message: 'Product added/updated successfully.' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: "Server error." });
+        console.error('Error adding/updating product:', error);
+        res.status(500).json({ success: false, message: 'Server error.' });
     }
-});
+};
 
-module.exports = router;
+// Delete a product
+const deleteProduct = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        // Check if product exists
+        const [product] = await pool.promise().query(
+            'SELECT id, image_path FROM products WHERE id = ?',
+            [id]
+        );
+
+        if (product.length === 0) {
+            return res.status(404).json({ success: false, message: 'Product not found.' });
+        }
+
+        // Delete the product's image file if it exists
+        if (product[0].image_path && fs.existsSync(product[0].image_path)) {
+            fs.unlinkSync(product[0].image_path);
+        }
+
+        // Delete the product from the database
+        await pool.promise().query('DELETE FROM products WHERE id = ?', [id]);
+
+        res.json({ success: true, message: 'Product deleted successfully.' });
+    } catch (error) {
+        console.error('Error deleting product:', error);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+};
+
+module.exports = {
+    listProducts,
+    addOrUpdateProduct,
+    deleteProduct,
+};
