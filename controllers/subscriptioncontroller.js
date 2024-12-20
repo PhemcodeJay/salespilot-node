@@ -1,6 +1,7 @@
 const mysql = require('mysql2');
 const { DateTime } = require('luxon');
 const express = require('express');
+const { checkAndDeactivateSubscriptions } = require('../controllers/subscriptioncontroller');
 const app = express();
 
 app.use(express.json()); // Middleware for JSON payloads
@@ -167,3 +168,4 @@ const getUserIdByPayment = async (saleId) => {
 // Start the server
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+

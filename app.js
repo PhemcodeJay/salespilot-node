@@ -80,10 +80,7 @@ const routes = {
     pdfRoute: require('./routes/pdfRoute'), // Ensure pdfRoute is imported here
 };
 
-// Dynamically load routes
-Object.entries(routes).forEach(([routeName, routeHandler]) => {
-    app.use(`/api/${routeName}`, routeHandler);
-});
+
 
 // JWT Authentication Example Routes
 app.post('/login', (req, res) => {
@@ -141,7 +138,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start Server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
