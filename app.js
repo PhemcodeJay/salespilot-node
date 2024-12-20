@@ -76,7 +76,7 @@ const routes = {
     profile: require('./routes/profileRoute'),
     staff: require('./routes/staffRoute'),
     subscription: require('./routes/subscriptionRoute'),
-    paypal: require('./routes/paypalRoute'), // Adjusted to correct import path
+    paypal: require('./config/paypalconfig'), // Adjusted to correct import path
     pdfRoute: require('./routes/pdfRoute'), // Ensure pdfRoute is imported here
 };
 
