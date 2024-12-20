@@ -39,6 +39,7 @@ app.use(session({
     cookie: { secure: false } // Set to true if using HTTPS
 }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(pdfRoute);
 
 // Serve Static Files and HTML Pages
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
@@ -66,7 +67,9 @@ const routes = {
     profile: require('./routes/profileRoute'),
     staff: require('./routes/staffRoute'),
     subscription: require('./routes/subscriptionRoute'),
-    paypal: require('./paypal') // PayPal routes
+    paypal: require('./paypal'), // PayPal routes
+    pdfRoute: require('./routes/pdfRoute')
+
 };
 
 Object.entries(routes).forEach(([routeName, routeHandler]) => {

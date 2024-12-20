@@ -1,6 +1,30 @@
 const fs = require('fs');
 const path = require('path');
 const { pool } = require('../models/db'); // Assuming pool is already configured
+const { checkLogin } = require('../middleware/auth'); // Import middleware
+
+// List all inventory records (view-only)
+const listInventory = async (req, res) => {
+    try {
+        // Query for inventory data, you may want to join with products, categories, etc.
+        const [inventory] = await pool.promise().query('SELECT * FROM inventory');
+        res.json({ success: true, inventory });
+    } catch (error) {
+        console.error('Error listing inventory:', error);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+};
+
+// List all categories
+const listCategories = async (req, res) => {
+    try {
+        const [categories] = await pool.promise().query('SELECT * FROM categories');
+        res.json({ success: true, categories });
+    } catch (error) {
+        console.error('Error listing categories:', error);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+};
 
 // List all products
 const listProducts = async (req, res) => {
@@ -13,7 +37,7 @@ const listProducts = async (req, res) => {
     }
 };
 
-// Add or update a product
+// Add or update a product in the inventory
 const addOrUpdateProduct = async (req, res) => {
     const {
         name,
@@ -130,7 +154,7 @@ const addOrUpdateProduct = async (req, res) => {
     }
 };
 
-// Delete a product
+// Delete a product from the inventory
 const deleteProduct = async (req, res) => {
     const { id } = req.params;
 
@@ -160,7 +184,10 @@ const deleteProduct = async (req, res) => {
     }
 };
 
+// Export the functions for use in the routes
 module.exports = {
+    listInventory,     // List inventory records
+    listCategories,    // Newly added for listing categories
     listProducts,
     addOrUpdateProduct,
     deleteProduct,

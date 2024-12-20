@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../models/db'); // Using a pre-configured connection pool
-const bodyParser = require('body-parser');
+const { pool } = require('../models/db'); // Using the pre-configured connection pool
 const session = require('express-session');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const productController = require('../controllers/productcontroller'); // Corrected controller file for products
+const { checkLogin } = require('../middleware/auth'); // Import middleware
+
 
 // Session setup
 router.use(
@@ -17,30 +16,8 @@ router.use(
   })
 );
 
-// Middleware to check if the user is logged in
-const isAuthenticated = (req, res, next) => {
-  if (!req.session.username) {
-    return res.status(401).json({ success: false, message: 'Authentication required.' });
-  }
-  next();
-};
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadsDir = path.join(__dirname, '..', 'uploads');
-    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
-  },
-});
-const upload = multer({ storage });
-
-// GET route for categories and products
-router.get('/categories', isAuthenticated, async (req, res) => {
+// GET route for categories and products (view-only)
+router.get('/categories', checkLogin, async (req, res) => {
   try {
     const username = req.session.username;
 
@@ -55,20 +32,9 @@ router.get('/categories', isAuthenticated, async (req, res) => {
     }
     const { email, date } = userResult[0];
 
-    // Fetch categories and products
-    const [categories] = await pool.promise().query(
-      'SELECT category_id, category_name FROM categories'
-    );
-
-    const [products] = await pool.promise().query(
-      `
-      SELECT 
-        p.id AS product_id, p.name AS product_name, p.description, p.price, p.image_path, 
-        p.inventory_qty, c.category_name 
-      FROM products p
-      JOIN categories c ON p.category_id = c.category_id
-      `
-    );
+    // Fetch categories and products from the controller
+    const categories = await productController.listCategories();  // Assuming this method exists
+    const products = await productController.listProducts();      // Assuming this method exists
 
     res.json({
       success: true,
@@ -80,3 +46,6 @@ router.get('/categories', isAuthenticated, async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error.', error: err.message });
   }
 });
+
+// Export the router
+module.exports = router;

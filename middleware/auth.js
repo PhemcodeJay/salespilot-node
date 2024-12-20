@@ -20,7 +20,7 @@ function verifyToken(token) {
   });
 }
 
-// Middleware to Check Login
+// Middleware to Check Login (via JWT Token)
 async function checkLogin(req, res, next) {
   try {
     // Extract the token from the Authorization header
@@ -30,9 +30,7 @@ async function checkLogin(req, res, next) {
     }
 
     // Check if the token is prefixed with "Bearer"
-    const token = authHeader.startsWith('Bearer ')
-      ? authHeader.split(' ')[1]
-      : authHeader;
+    const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
 
     if (!token) {
       return res.status(403).json({ error: 'Invalid token format.' });
@@ -51,4 +49,5 @@ async function checkLogin(req, res, next) {
   }
 }
 
+// Exporting the functions and middleware in one object
 module.exports = { generateToken, verifyToken, checkLogin };

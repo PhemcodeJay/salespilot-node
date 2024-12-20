@@ -4,7 +4,7 @@ const path = require('path');
 const dayjs = require('dayjs');
 const pool = require('../models/db'); // Assuming MySQL database connection
 const session = require('express-session');
-const verifyToken = require('../verifyToken'); // Middleware for verifying token (if required)
+const verifyToken = require('../middleware/auth'); // Middleware for verifying token (if required)
 const chartReportController = require('../controllers/chart-reportcontroller'); // The controller for chart-related actions
 
 // Middleware for handling sessions

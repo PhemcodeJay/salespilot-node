@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
-const verifyToken = require('../verifyToken');
+const { checkLogin } = require('../middleware/auth'); // Import middleware
 const userModel = require('../models/user');
 const expenseModel = require('../models/expense');
 

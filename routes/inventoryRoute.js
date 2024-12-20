@@ -1,18 +1,13 @@
 const express = require('express');
-const productController = require('../controllers/productcontroller'); // Updated controller file
+const productController = require('../controllers/productcontroller'); // Corrected controller file for products
 const router = express.Router();
+const { checkLogin } = require('../middleware/auth'); // Import middleware
 
 // Middleware to parse incoming JSON requests
 router.use(express.json());
 
-// Get Inventory Data
-router.get('/inventory', productController.getInventoryData);
-
-// Update Product Stock
-router.put('/inventory/update/:id', productController.updateProductStock);
-
-// Generate PDF Report for Inventory
-router.get('/inventory/pdf', productController.generateInventoryPDF);
+// Get all inventory records (products)
+router.get('/inventory', productController.listInventory);
 
 // Export the router
 module.exports = router;
