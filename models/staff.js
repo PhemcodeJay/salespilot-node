@@ -1,6 +1,6 @@
-const db = require('../db');  // Assuming db is in the 'db.js' file or configured separately.
+const db = require('../config/db');  // Assuming db is in the 'db.js' file or configured separately.
 
-class StaffModel {
+class staff {
 
     // Method to insert a new staff record
     static insertStaff(staff_name, staff_email, staff_phone, position) {

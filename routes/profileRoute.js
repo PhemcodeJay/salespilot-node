@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const profileController = require('../controllers/profilecontroller'); // Ensure the path to the controller is correct
-const verifyToken = require('../verifyToken'); // Middleware for token verification
+const { checkLogin } = require('../middleware/auth'); // Import middleware
 
 // Middleware for session handling (optional, depending on your app needs)
 const session = require('express-session');
@@ -16,14 +16,14 @@ router.use(session({
 const pool = require('../models/db');
 
 // Routes for profile-related actions
-router.get('/profile/:userId', verifyToken, profileController.getUserProfile); // Get user profile by ID
-router.put('/profile/:userId', verifyToken, profileController.updateUserProfile); // Update user profile by ID
-router.delete('/profile/:userId', verifyToken, profileController.deleteUserProfile); // Delete user profile by ID
+router.get('/profile/:userId', checkLogin, profileController.getUserProfile); // Get user profile by ID
+router.put('/profile/:userId', checkLogin, profileController.updateUserProfile); // Update user profile by ID
+router.delete('/profile/:userId', checkLogin, profileController.deleteUserProfile); // Delete user profile by ID
 
 // Route for subscription status
-router.get('/subscription/:userId', verifyToken, profileController.getSubscriptionStatus); // Get subscription status
+router.get('/subscription/:userId', checkLogin, profileController.getSubscriptionStatus); // Get subscription status
 
 // Route for payment processing
-router.post('/payment', verifyToken, profileController.processPayment); // Process payment and update subscription
+router.post('/payment', checkLogin, profileController.processPayment); // Process payment and update subscription
 
 module.exports = router;

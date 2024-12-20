@@ -87,7 +87,7 @@ const exportCustomerToPDF = async (customer_id) => {
 };
 
 // Generate PDF report of all customers
-const generatecustomersPdf = async (req, res) => {
+const generateCustomersPdf = async (req, res) => {
     try {
         // Fetch all customers
         const customers = await query('SELECT customer_id, customer_name, customer_email, customer_phone, customer_location FROM customers ORDER BY customer_name DESC');
@@ -190,6 +190,11 @@ exports.handleCustomerActions = async (req, res) => {
             res.setHeader('Content-Type', 'application/pdf');
             res.setHeader('Content-Disposition', `attachment; filename=customer_${customer_id}.pdf`);
             doc.pipe(res);
+        }
+
+        // Generate customers PDF report
+        if (action === 'generate_customers_pdf') {
+            await generateCustomersPdf(req, res);
         }
     } catch (err) {
         console.error("Error: ", err);

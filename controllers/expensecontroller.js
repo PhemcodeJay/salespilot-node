@@ -1,11 +1,7 @@
-const mysql = require('mysql2'); // Assuming you're using mysql2 for database connection
-const jwt = require('jsonwebtoken');
+const mysql = require('mysql2');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
-const { checkLogin } = require('../middleware/auth'); // Import middleware
-const userModel = require('../models/user');
-const expenseModel = require('../models/expense');
 
 // Create a connection pool to the database
 const pool = mysql.createPool({
@@ -19,22 +15,7 @@ const pool = mysql.createPool({
 });
 
 // Export the pool for use in other files
-module.exports = pool;
-
-// Use the pool for queries
-const db = pool; 
-
-
-// Fetch user details by token
-const fetchUserInfo = (username) => {
-    return new Promise((resolve, reject) => {
-        db.query('SELECT username, email, date, phone, location, user_image FROM users WHERE username = ?', [username], (err, results) => {
-            if (err) return reject("Error fetching user info");
-            if (results.length === 0) return reject("User not found.");
-            resolve(results[0]);
-        });
-    });
-};
+const db = pool;
 
 // Fetch all expenses
 const getAllExpenses = async (req, res) => {
@@ -152,7 +133,7 @@ const generateExpensesPdf = async (req, res) => {
 
         // Create a new PDF document
         const doc = new PDFDocument();
-        
+
         // Set the file name and path
         const filePath = path.join(reportsDir, `expenses_report_${Date.now()}.pdf`);
 
@@ -164,13 +145,13 @@ const generateExpensesPdf = async (req, res) => {
         doc.moveDown();
         doc.fontSize(12).text(`Date Generated: ${new Date().toLocaleString()}`, { align: 'center' });
         doc.moveDown();
-        
+
         doc.text('--------------------------------------', { align: 'center' });
         doc.moveDown();
-        
+
         doc.text('ID | Description | Amount | Date | Category');
         doc.text('--------------------------------------');
-        
+
         // Add expenses data to the PDF
         expenses.forEach(expense => {
             doc.text(`${expense.id} | ${expense.description} | $${expense.amount} | ${expense.date} | ${expense.category}`);
@@ -186,6 +167,7 @@ const generateExpensesPdf = async (req, res) => {
     }
 };
 
+// Exporting all the methods to be used in routes
 module.exports = {
     getAllExpenses,
     getExpenseById,

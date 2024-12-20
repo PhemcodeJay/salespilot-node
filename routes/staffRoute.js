@@ -6,7 +6,7 @@ const authController = require('../controllers/authcontroller');
 const staffController = require('../controllers/staffcontroller');
 const pool = require('../models/db'); // Import the database connection
 const session = require('express-session');
-const verifyToken = require('../verifyToken');
+const { checkLogin } = require('../middleware/auth'); // Import middleware
 const multer = require('multer');
 
 const router = express.Router();

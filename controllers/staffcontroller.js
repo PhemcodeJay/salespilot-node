@@ -6,7 +6,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const fs = require('fs'); // Add fs for file system operations
 const app = express();
-const StaffModel = require('./models/staffs');
+const StaffModel = require('../models/staff');
 const userModel = require('../models/user');
 
 // MySQL connection pool setup

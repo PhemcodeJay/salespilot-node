@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { pool } = require('../models/db'); // Assuming pool is already configured
 const { checkLogin } = require('../middleware/auth'); // Import middleware
+const generatePDF = require('../generatepdf'); // Import your PDF generation function
 
 // List all inventory records (view-only)
 const listInventory = async (req, res) => {
@@ -184,11 +185,38 @@ const deleteProduct = async (req, res) => {
     }
 };
 
+// Generate PDF for a specific product (for example, a product catalog or invoice)
+const generateProductPDF = async (req, res) => {
+    try {
+        const { productId } = req.params;
+
+        // Fetch product details from the database
+        const [product] = await pool.promise().query('SELECT * FROM products WHERE id = ?', [productId]);
+
+        if (product.length === 0) {
+            return res.status(404).json({ success: false, message: 'Product not found.' });
+        }
+
+        // Generate the PDF and send it as a response
+        generatePDF(product[0], (err, pdfBuffer) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: 'Error generating PDF.' });
+            }
+            res.contentType('application/pdf');
+            res.send(pdfBuffer); // Send the generated PDF buffer as the response
+        });
+    } catch (error) {
+        console.error('Error generating product PDF:', error);
+        res.status(500).json({ success: false, message: 'Server error.' });
+    }
+};
+
 // Export the functions for use in the routes
 module.exports = {
-    listInventory,     // List inventory records
-    listCategories,    // Newly added for listing categories
+    listInventory,
+    listCategories,
     listProducts,
     addOrUpdateProduct,
     deleteProduct,
+    generateProductPDF, // New function for generating PDFs
 };

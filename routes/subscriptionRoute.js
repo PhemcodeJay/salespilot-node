@@ -8,7 +8,8 @@ const {
 const { checkAndDeactivateSubscriptions } = require('../controllers/subscriptioncontroller');
 const profileController = require('../controllers/profilecontroller');
 const authController = require('../controllers/authcontroller');
-const verifyToken = require('../verifyToken'); // Middleware for authentication
+const { checkLogin } = require('../middleware/auth'); // Import middleware
+const { check } = require('express-validator');
 const router = express.Router();
 
 // ========================
@@ -16,49 +17,49 @@ const router = express.Router();
 // ========================
 
 // User login
-router.post('/auth/login', authController.loginUser);
+router.post('/auth/login', checkLogin, authController.loginUser);
 
 // User registration
 router.post('/auth/register', authController.registerUser);
 
 // User logout
-router.post('/auth/logout', verifyToken, authController.logoutUser);
+router.post('/auth/logout', checkLogin, authController.logoutUser);
 
 // ========================
 // Profile Routes
 // ========================
 
 // Fetch user profile
-router.get('/profile', verifyToken, profileController.getProfile);
+router.get('/profile', checkLogin, profileController.getProfile);
 
 // Update user profile
-router.put('/profile/update', verifyToken, profileController.updateProfile);
+router.put('/profile/update', checkLogin, profileController.updateProfile);
 
 // Update user password
-router.put('/profile/password', verifyToken, profileController.updatePassword);
+router.put('/profile/password', checkLogin, profileController.updatePassword);
 
 // ========================
 // Payment Routes
 // ========================
 
 // Route to process payment and check subscription
-router.post('/payments/process', verifyToken, checkSubscriptionAndProcessPayment);
+router.post('/payments/process', checkLogin, checkSubscriptionAndProcessPayment);
 
 // Route to get all payments for a specific user
-router.get('/payments/user/:user_id', verifyToken, getPaymentsByUser);
+router.get('/payments/user/:user_id', checkLogin, getPaymentsByUser);
 
 // Route to get a specific payment by ID
-router.get('/payments/:payment_id', verifyToken, getPaymentById);
+router.get('/payments/:payment_id', checkLogin, getPaymentById);
 
 // Route to update payment status
-router.put('/payments/:payment_id/status', verifyToken, updatePaymentStatus);
+router.put('/payments/:payment_id/status', checkLogin, updatePaymentStatus);
 
 // ========================
 // Subscription Routes
 // ========================
 
 // Route to manually deactivate expired subscriptions
-router.get('/subscriptions/deactivate-expired', verifyToken, async (req, res) => {
+router.get('/subscriptions/deactivate-expired', checkLogin, async (req, res) => {
   try {
     await checkAndDeactivateSubscriptions();
     res.status(200).json({ message: 'Checked and deactivated expired subscriptions' });

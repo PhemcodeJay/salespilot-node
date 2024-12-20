@@ -3,12 +3,12 @@ const fs = require('fs');
 const path = require('path');
 
 // Assuming you have all your models already imported
-const Customers = require('./models/Customers');
-const Expenses = require('./models/Expenses');
-const Suppliers = require('./models/Suppliers');
-const Staff = require('./models/Staff');
-const Sales = require('./models/Sales');
-const Products = require('./models/Products');
+const Customers = require('./models/customer');
+const Expenses = require('./models/expense');
+const Suppliers = require('./models/supplier');
+const Staff = require('./models/staff');
+const Sales = require('./models/sales');
+const Products = require('./models/product');
 
 // PDF generation middleware
 async function generatePDF(req, res) {

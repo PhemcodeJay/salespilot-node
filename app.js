@@ -39,6 +39,9 @@ app.use(session({
     cookie: { secure: false } // Set to true if using HTTPS
 }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Ensure pdfRoute is correctly imported before use
+const pdfRoute = require('./routes/pdfRoute'); // Define pdfRoute
 app.use(pdfRoute);
 
 // Serve Static Files and HTML Pages
@@ -68,8 +71,7 @@ const routes = {
     staff: require('./routes/staffRoute'),
     subscription: require('./routes/subscriptionRoute'),
     paypal: require('./paypal'), // PayPal routes
-    pdfRoute: require('./routes/pdfRoute')
-
+    pdfRoute: require('./routes/pdfRoute') // Ensure pdfRoute is imported here as well
 };
 
 Object.entries(routes).forEach(([routeName, routeHandler]) => {
