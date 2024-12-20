@@ -1,12 +1,14 @@
-require('dotenv').config();
+require('dotenv').config(); // Load environment variables from .env file
 const express = require('express');
 const mysql = require('mysql2');
 const path = require('path');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const passport = require('passport');
-const paypalClient = require('./config/paypalConfig');
+const bcrypt = require('bcryptjs'); // For password hashing
 const { generateToken, verifyToken } = require('./config/auth'); // JWT helper
+const openai = require('openai'); // Assuming OpenAI SDK or API for tenant use cases
+const paypalClient = require('./config/paypalconfig'); // PayPal client configuration
 require('./config/passport')(passport); // Passport configuration
 
 // Initialize Express App
@@ -17,11 +19,11 @@ const db = mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'dbs13455438'
+    database: process.env.DB_NAME || 'dbs13455438',
 });
 
 // Check Database Connection
-db.connect(err => {
+db.connect((err) => {
     if (err) {
         console.error('Database connection error:', err);
         process.exit(1); // Exit the application if DB connection fails
@@ -29,20 +31,24 @@ db.connect(err => {
     console.log('Connected to the MySQL database.');
 });
 
-// Middleware
+// Middleware Setup
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(session({
+
+// Session Configuration
+const sessionConfig = session({
     secret: process.env.SESSION_SECRET || 'your-secret-key', // Use a strong secret key
     resave: false,
     saveUninitialized: true,
     cookie: { secure: false } // Set to true if using HTTPS
-}));
-app.use(express.static(path.join(__dirname, 'public')));
+});
+app.use(sessionConfig); // Apply session configuration globally
 
-// Ensure pdfRoute is correctly imported before use
-const pdfRoute = require('./routes/pdfRoute'); // Define pdfRoute
-app.use(pdfRoute);
+// OpenAI Configuration (for tenancy management)
+const openaiClient = new openai.OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    organizationId: process.env.OPENAI_ORG_ID,
+});
 
 // Serve Static Files and HTML Pages
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
@@ -70,10 +76,11 @@ const routes = {
     profile: require('./routes/profileRoute'),
     staff: require('./routes/staffRoute'),
     subscription: require('./routes/subscriptionRoute'),
-    paypal: require('./paypal'), // PayPal routes
-    pdfRoute: require('./routes/pdfRoute') // Ensure pdfRoute is imported here as well
+    paypal: require('./routes/paypalRoute'), // Adjusted to correct import path
+    pdfRoute: require('./routes/pdfRoute'), // Ensure pdfRoute is imported here
 };
 
+// Dynamically load routes
 Object.entries(routes).forEach(([routeName, routeHandler]) => {
     app.use(`/api/${routeName}`, routeHandler);
 });
@@ -103,8 +110,8 @@ app.post('/create-payment', verifyToken, async (req, res) => {
         ],
         application_context: {
             return_url: 'http://localhost:3000/payment-success',
-            cancel_url: 'http://localhost:3000/payment-cancel'
-        }
+            cancel_url: 'http://localhost:3000/payment-cancel',
+        },
     };
 
     const request = new paypalClient.orders.OrdersCreateRequest();

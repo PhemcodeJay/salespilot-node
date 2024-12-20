@@ -219,3 +219,13 @@ exports.login = async (req, res) => {
     }
 };
 
+// Logout
+exports.logout = (req, res) => {
+    try {
+        // Invalidate the JWT token by removing it from the client-side storage (localStorage, cookies, etc.)
+        // Since we're not maintaining sessions on the server, the logout action would be done client-side
+        res.json({ message: 'Logout successful.' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error during logout.', error: error.message });
+    }
+};

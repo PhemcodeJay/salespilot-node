@@ -1,9 +1,8 @@
+const bcrypt = require('bcryptjs'); // For password hashing
 const User = require('../models/user'); // Assuming the model is in the 'models' folder
 const Subscription = require('../models/subscriptions'); // Import the subscriptions model
-const dayjs = require('day'); // For date manipulation
+const dayjs = require('dayjs'); // For date manipulation
 const db = require('../config/db'); // Assuming the db connection is configured here
-const userModel = require('../models/user');
-const subscriptionModel = require('../models/subscriptions');
 
 // Helper function to check if a user has an active subscription
 const checkSubscription = async (userId) => {
@@ -47,8 +46,16 @@ exports.updateUserProfile = async (req, res) => {
   const { username, email, password, phone, role } = req.body; // Get updated data from request body
 
   try {
+    // Check if the password is being updated
+    let updatedData = { username, email, phone, role };
+    if (password) {
+      // Hash the new password before saving it
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updatedData.password = hashedPassword;
+    }
+
     // Update user profile using the User model
-    const updated = await User.update(userId, { username, email, password, phone, role });
+    const updated = await User.update(userId, updatedData);
 
     if (updated) {
       res.send('Profile updated successfully');
@@ -136,5 +143,41 @@ exports.processPayment = async (req, res) => {
     }
   } catch (error) {
     res.status(500).send(`Error processing payment: ${error.message}`);
+  }
+};
+
+// Update password function
+exports.updatePassword = async (req, res) => {
+  const userId = req.params.userId; // Get user ID from URL params
+  const { oldPassword, newPassword } = req.body; // Get old and new passwords from request body
+
+  try {
+    // Fetch the user from the database
+    const user = await User.getById(userId);
+
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+
+    // Compare old password with the stored password (hashed)
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(400).send('Old password is incorrect');
+    }
+
+    // Hash the new password before saving it
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the user's password in the database
+    const updated = await User.update(userId, { password: hashedPassword });
+
+    if (updated) {
+      res.send('Password updated successfully');
+    } else {
+      res.status(500).send('Error updating password');
+    }
+  } catch (error) {
+    res.status(500).send(`Error updating password: ${error.message}`);
   }
 };

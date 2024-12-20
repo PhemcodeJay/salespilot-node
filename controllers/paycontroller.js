@@ -11,8 +11,8 @@ exports.checkSubscriptionAndProcessPayment = async (req, res) => {
     // Step 1: Check if the user has an active subscription
     const activeSubscription = await Subscription.getSubscriptionStatus(user_id);
 
-    // Step 2: If no active subscription, check if it's a free trial or regular subscription
     if (!activeSubscription) {
+      // Step 2: If no active subscription, check if it's a free trial or regular subscription
       const freeTrial = await Subscription.createFreeTrial(user_id); // Automatically assign free trial if no active subscription
 
       // Handle payment for free trial
@@ -36,7 +36,7 @@ exports.checkSubscriptionAndProcessPayment = async (req, res) => {
       payment_method,
       payment_proof,
       payment_amount,
-      payment_status: payment_status || 'pending',
+      payment_status: payment_status || 'pending', // Default to 'pending' if no payment_status is provided
       subscription_id: subscriptionId,
     };
 
@@ -45,14 +45,16 @@ exports.checkSubscriptionAndProcessPayment = async (req, res) => {
 
     // Step 4: If the payment was successful, upgrade or renew the subscription
     if (payment_status === 'completed') {
-      // You can handle the upgrade or renewal logic here
-      await Subscription.upgradeSubscription(user_id, 'Premium'); // Upgrade to a new plan (if applicable)
-    }
+      // Handle the upgrade or renewal logic
+      await Subscription.upgradeSubscription(user_id, 'Premium'); // Assuming you upgrade to 'Premium' for all successful payments
 
-    res.status(200).json({ message: 'Payment processed successfully', payment });
+      return res.status(200).json({ message: 'Payment processed successfully', payment });
+    } else {
+      return res.status(200).json({ message: 'Payment pending, awaiting confirmation', payment });
+    }
   } catch (error) {
     console.error('Error processing payment:', error);
-    res.status(500).json({ error: 'Failed to process payment' });
+    res.status(500).json({ error: 'Failed to process payment', details: error.message });
   }
 };
 
@@ -61,10 +63,13 @@ exports.getPaymentsByUser = async (req, res) => {
 
   try {
     const payments = await Payment.getPaymentsByUserId(user_id);
+    if (payments.length === 0) {
+      return res.status(404).json({ error: 'No payments found for this user' });
+    }
     res.json({ payments });
   } catch (error) {
     console.error('Error fetching payments:', error);
-    res.status(500).json({ error: 'Failed to fetch payments' });
+    res.status(500).json({ error: 'Failed to fetch payments', details: error.message });
   }
 };
 
@@ -73,10 +78,13 @@ exports.getPaymentById = async (req, res) => {
 
   try {
     const payment = await Payment.getPaymentById(payment_id);
+    if (!payment) {
+      return res.status(404).json({ error: 'Payment not found' });
+    }
     res.json({ payment });
   } catch (error) {
     console.error('Error fetching payment:', error);
-    res.status(500).json({ error: 'Failed to fetch payment' });
+    res.status(500).json({ error: 'Failed to fetch payment', details: error.message });
   }
 };
 
@@ -85,6 +93,10 @@ exports.updatePaymentStatus = async (req, res) => {
   const { payment_status } = req.body;
 
   try {
+    if (!payment_status) {
+      return res.status(400).json({ error: 'Payment status is required' });
+    }
+
     const success = await Payment.updatePaymentStatus(payment_id, payment_status);
     if (success) {
       res.json({ message: 'Payment status updated successfully' });
@@ -93,6 +105,6 @@ exports.updatePaymentStatus = async (req, res) => {
     }
   } catch (error) {
     console.error('Error updating payment status:', error);
-    res.status(500).json({ error: 'Failed to update payment status' });
+    res.status(500).json({ error: 'Failed to update payment status', details: error.message });
   }
 };

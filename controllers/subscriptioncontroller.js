@@ -31,7 +31,9 @@ app.get('/user/info', isLoggedIn, async (req, res) => {
       [username]
     );
 
-    if (!results.length) throw new Error('User not found');
+    if (!results.length) {
+      throw new Error('User not found');
+    }
 
     const user = results[0];
     user.date = DateTime.fromISO(user.date).toFormat('dd LLLL, yyyy');
@@ -71,25 +73,12 @@ app.post('/paypal/webhook', async (req, res) => {
 
     switch (eventType) {
       case 'BILLING.SUBSCRIPTION.ACTIVATED':
-        const subscriptionId = payload.resource.id;
-        const planId = payload.resource.plan_id;
-        const userId = await getUserIdBySubscription(subscriptionId);
-
-        const planName = getPlanName(planId);
-        if (planName) {
-          await activateSubscription(subscriptionId, planName, userId);
-          res.json({ status: 'Subscription activated' });
-        } else {
-          throw new Error(`Unknown plan ID: ${planId}`);
-        }
+        await handleSubscriptionActivated(payload);
+        res.json({ status: 'Subscription activated' });
         break;
 
       case 'PAYMENT.SALE.COMPLETED':
-        const saleId = payload.resource.id;
-        const amount = payload.resource.amount.total;
-        const saleUserId = await getUserIdByPayment(saleId);
-
-        await recordPayment(saleId, amount, saleUserId);
+        await handlePaymentCompleted(payload);
         res.json({ status: 'Payment recorded' });
         break;
 
@@ -102,7 +91,30 @@ app.post('/paypal/webhook', async (req, res) => {
   }
 });
 
-// Functions
+// Handle Subscription Activated Event
+const handleSubscriptionActivated = async (payload) => {
+  const subscriptionId = payload.resource.id;
+  const planId = payload.resource.plan_id;
+  const userId = await getUserIdBySubscription(subscriptionId);
+
+  const planName = getPlanName(planId);
+  if (planName) {
+    await activateSubscription(subscriptionId, planName, userId);
+  } else {
+    throw new Error(`Unknown plan ID: ${planId}`);
+  }
+};
+
+// Handle Payment Sale Completed Event
+const handlePaymentCompleted = async (payload) => {
+  const saleId = payload.resource.id;
+  const amount = payload.resource.amount.total;
+  const saleUserId = await getUserIdByPayment(saleId);
+
+  await recordPayment(saleId, amount, saleUserId);
+};
+
+// Functions to Get Plan Name and Manage Subscriptions
 const getPlanName = (planId) => {
   const plans = {
     'P-92V01000GH171635WM5HYGRQ': 'starter',
