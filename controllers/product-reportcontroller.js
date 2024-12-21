@@ -6,7 +6,7 @@ const pool = mysql.createPool({
     host: 'localhost',
     user: 'root',
     password: '',
-    database: 'salespilot'
+    database: 'dbs13455438'
 });
 
 // Helper function to execute a query

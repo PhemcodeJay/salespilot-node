@@ -106,8 +106,8 @@ app.post('/create-payment', verifyToken, async (req, res) => {
             { amount: { value: req.body.amount } }
         ],
         application_context: {
-            return_url: 'http://localhost:3000/payment-success',
-            cancel_url: 'http://localhost:3000/payment-cancel',
+            return_url: 'http://localhost:5000/payment-success',
+            cancel_url: 'http://localhost:5000/payment-cancel',
         },
     };
 

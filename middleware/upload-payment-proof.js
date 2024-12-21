@@ -105,7 +105,3 @@ const sendPaymentEmail = (req, res) => {
 // Route for handling file upload and payment submission
 app.post('/upload-payment-proof', upload.single('payment_proof'), validatePaymentMethod, insertPaymentInfo, sendPaymentEmail);
 
-// Start the server
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-});
