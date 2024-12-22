@@ -8,7 +8,7 @@ const bodyParser = require('body-parser');
 const passport = require('passport');
 const bcrypt = require('bcryptjs'); // For password hashing
 const { generateToken, verifyToken } = require('./config/auth'); // JWT helper
-const openai = require('openai'); // Assuming OpenAI SDK or API for tenant use cases
+const openai = require('openai'); // OpenAI SDK for tenant use cases
 const paypalClient = require('./config/paypalconfig'); // PayPal client configuration
 require('./config/passport')(passport); // Passport configuration
 
@@ -37,29 +37,28 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Session Configuration
-const sessionConfig = session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key', // Use a strong secret key
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false }, // Set to true if using HTTPS
-});
-app.use(sessionConfig); // Apply session configuration globally
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET || 'your-secret-key',
+        resave: false,
+        saveUninitialized: true,
+        cookie: { secure: false }, // Set to true if using HTTPS
+    })
+);
 
-// OpenAI Configuration (for tenancy management)
-const openaiClient = new openai.OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    organizationId: process.env.OPENAI_ORG_ID,
-});
+// Passport Middleware
+app.use(passport.initialize());
+app.use(passport.session());
 
-// Serve Static Files from 'assets' and 'home_assets' Directories
+// Serve Static Files
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 app.use('/home_assets', express.static(path.join(__dirname, 'public', 'home_assets')));
 
-// Serve HTML Pages
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
+// Routes Setup
+const authRoutes = require('./routes/authRoute'); // Ensure this path is correct
+app.use('/auth', authRoutes); // Attach the auth routes to `/auth`
 
-// Import and Use Routes
+// Other Route Imports
 const routes = {
     dashboard: require('./routes/dashboardRoute'),
     supplier: require('./routes/supplierRoute'),
@@ -70,7 +69,6 @@ const routes = {
     product: require('./routes/productRoute'),
     chart: require('./routes/chartRoute'),
     chartReport: require('./routes/chart-reportRoute'),
-    auth: require('./routes/authRoute'),
     category: require('./routes/categoryRoute'),
     customer: require('./routes/customerRoute'),
     expense: require('./routes/expenseRoute'),
@@ -81,8 +79,7 @@ const routes = {
     profile: require('./routes/profileRoute'),
     staff: require('./routes/staffRoute'),
     subscription: require('./routes/subscriptionRoute'),
-    paypal: require('./config/paypalconfig'), // Adjusted to correct import path
-    pdfRoute: require('./routes/pdfRoute'), // Ensure pdfRoute is imported here
+    pdfRoute: require('./routes/pdfRoute'), // Ensure pdfRoute is imported
 };
 
 // Example Routes for Authentication
@@ -106,7 +103,7 @@ app.post('/create-payment', verifyToken, async (req, res) => {
     const order = {
         intent: 'CAPTURE',
         purchase_units: [
-            { amount: { value: req.body.amount } }
+            { amount: { value: req.body.amount } },
         ],
         application_context: {
             return_url: 'http://localhost:5000/payment-success',
@@ -126,7 +123,7 @@ app.post('/create-payment', verifyToken, async (req, res) => {
     }
 });
 
-// Import Cron Jobs
+// Cron Jobs
 require('./cron/subscriptioncron');
 
 // Default Route for Undefined Paths
