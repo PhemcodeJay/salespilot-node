@@ -1,3 +1,4 @@
+const punycode = require('punycode/');
 require('dotenv').config(); // Load environment variables from .env file
 const express = require('express');
 const mysql = require('mysql2');
