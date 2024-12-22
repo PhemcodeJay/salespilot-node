@@ -41,7 +41,7 @@ const sessionConfig = session({
     secret: process.env.SESSION_SECRET || 'your-secret-key', // Use a strong secret key
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false } // Set to true if using HTTPS
+    cookie: { secure: false }, // Set to true if using HTTPS
 });
 app.use(sessionConfig); // Apply session configuration globally
 
@@ -51,8 +51,9 @@ const openaiClient = new openai.OpenAI({
     organizationId: process.env.OPENAI_ORG_ID,
 });
 
-// Serve Static Files
+// Serve Static Files from 'assets' and 'home_assets' Directories
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
+app.use('/home_assets', express.static(path.join(__dirname, 'public', 'home_assets')));
 
 // Serve HTML Pages
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
