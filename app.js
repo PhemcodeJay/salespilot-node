@@ -51,7 +51,10 @@ const openaiClient = new openai.OpenAI({
     organizationId: process.env.OPENAI_ORG_ID,
 });
 
-// Serve Static Files and HTML Pages
+// Serve Static Files
+app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
+
+// Serve HTML Pages
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 
@@ -81,9 +84,7 @@ const routes = {
     pdfRoute: require('./routes/pdfRoute'), // Ensure pdfRoute is imported here
 };
 
-
-
-// JWT Authentication Example Routes
+// Example Routes for Authentication
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
     const user = { id: 1, email }; // Replace with your user validation logic
