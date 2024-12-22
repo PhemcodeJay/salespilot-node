@@ -1,60 +1,59 @@
-// Import required modules
 const express = require('express');
-const path = require('path');
-const authController = require('../controllers/authcontroller'); // Import the controller
+const authController = require('../controllers/authcontroller');
 const router = express.Router();
-const session = require('express-session');
-const pool = require('../models/db'); // Import the database connection
-const { checkLogin } = require('../middleware/auth'); // Import middleware
+const nodemailer = require('nodemailer');
 
+// Signup route
+router.post('/signup', authController.signup);
 
+// Activate account route
+router.post('/activate', authController.activateAccount);
 
-// Static File Routes
-router.use(express.static(path.join(__dirname, '../views/auth')));
+// Request password reset route
+router.post('/password-reset/request', authController.requestPasswordReset);
 
-// Serve static pages
-router.get('/signup', (req, res) => res.sendFile(path.join(__dirname, '../views/auth/signup.html')));
-router.get('/login', (req, res) => res.sendFile(path.join(__dirname, '../views/auth/login.html')));
-router.get('/activate', (req, res) => res.sendFile(path.join(__dirname, '../views/auth/activate.html')));
+// Reset password route
+router.post('/password-reset/reset', authController.resetPassword);
 
-// Serve the 'recoverpwd.html' page for password recovery
-router.get('/recoverpwd', (req, res) => {
-    const { csrf_token } = req.session; // Assuming CSRF token is stored in session
-    const { token: reset_code } = req.query; // Token passed in the URL for validation
+// Login route
+router.post('/login', authController.login);
 
-    if (reset_code && csrf_token) {
-        res.sendFile(path.join(__dirname, '../views/auth/recoverpwd.html'));
-    } else {
-        res.status(400).json({ message: 'Invalid or missing reset code or CSRF token' });
+// Logout route
+router.post('/logout', authController.logout);
+
+// Feedback mail route
+router.post('/feedback', async (req, res) => {
+    const { name, email, message } = req.body;
+    
+    if (!name || !email || !message) {
+        return res.status(400).json({ error: 'All fields (name, email, message) are required.' });
+    }
+
+    // Configure Nodemailer transport
+    const transporter = nodemailer.createTransport({
+        service: 'gmail', // Use your email service
+        auth: {
+            user: 'your-email@gmail.com', // Your email address
+            pass: 'your-email-password',  // Your email password or app-specific password
+        },
+    });
+
+    // Define mail options
+    const mailOptions = {
+        from: email,          // Sender's email (user's email)
+        to: 'support@yourdomain.com',  // Destination email (admin/support email)
+        subject: `Feedback from ${name}`,
+        text: message, // Feedback message
+    };
+
+    try {
+        // Send email
+        await transporter.sendMail(mailOptions);
+        res.status(200).json({ message: 'Feedback sent successfully!' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to send feedback. Please try again later.' });
     }
 });
 
-// Serve the 'passwordreset.html' page for password reset
-router.get('/passwordreset', (req, res) => {
-    const { token: reset_code } = req.query; // Token passed in the URL for password reset
-
-    if (reset_code) {
-        res.sendFile(path.join(__dirname, '../views/auth/passwordreset.html'));
-    } else {
-        res.status(400).json({ message: 'Invalid or missing reset code' });
-    }
-});
-
-// Auth API Routes
-router.post('/signup', authController.signup); // User registration
-router.post('/login', authController.login); // User login
-router.post('/request-password-reset', authController.requestPasswordReset); // Request password reset
-router.post('/reset-password', authController.resetPassword); // Reset password
-router.post('/activate', authController.activateAccount); // Account activation (activation code provided in body)
-
-// Account activation via token passed in URL or body
-router.get('/activate/:token', authController.activateAccount); // Token in URL
-router.post('/activate/:token', authController.activateAccount); // Token in request body
-
-// Protect a route (Example with checkLogin middleware)
-router.get('/protected', checkLogin, (req, res) => {
-    res.json({ message: 'This is a protected route.', user: req.user });
-});
-
-// Export the router
 module.exports = router;

@@ -12,6 +12,7 @@ const openai = require('openai'); // OpenAI SDK for tenant use cases
 const paypalClient = require('./config/paypalconfig'); // PayPal client configuration
 require('./config/passport')(passport); // Passport configuration
 
+
 // Initialize Express App
 const app = express();
 
@@ -35,6 +36,8 @@ db.connect((err) => {
 // Middleware Setup
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+
 
 // Session Configuration
 app.use(
