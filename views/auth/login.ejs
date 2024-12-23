@@ -32,19 +32,15 @@
                     <div class="p-3">
                       <h2 class="mb-2">Login</h2>
                       <p>Welcome back! Please login to your account.</p>
-                      <form id="login-form" autocomplete="off">
-                        <% if (error_message) { %>
-                          <div id="error-message" class="alert alert-danger text-center"><%= error_message %></div>
-                      <% } %>
+                      <form id="/login" autocomplete="off">
+                       
 
                         <div class="input-group input-group-outline mb-3">
                           <input type="text" id="username" class="form-control" placeholder="Enter your username" required value="<%= username || '' %>">
-                          <small id="username-error" class="text-danger"><%= username_err || '' %></small>
                         </div>
 
                         <div class="input-group input-group-outline mb-3">
                           <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
-                          <small id="password-error" class="text-danger"><%= password_err || '' %></small>
                         </div>
 
                         <div class="form-check form-check-info text-start ps-0">

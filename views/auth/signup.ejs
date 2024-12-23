@@ -35,12 +35,11 @@
                       <form action="/signup" method="POST">
                         <div class="input-group input-group-outline mb-3">
                             <input type="text" id="username" name="username" class="form-control" placeholder="Enter your username" required value="<%= username || '' %>">
-                            <small id="username-error" class="text-danger"><%= username_error || '' %></small>
                         </div>
                     
                         <div class="input-group input-group-outline mb-3">
                             <input type="email" id="email" name="email" class="form-control" placeholder="Enter your email" required value="<%= email || '' %>">
-                            <small id="email-error" class="text-danger"><%= email_error || '' %></small>
+
                         </div>
                     
                         <div class="input-group input-group-outline mb-3">
@@ -51,27 +50,17 @@
                             <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Confirm your password" required>
                         </div>
                     
-                        <% if (error_message) { %>
-                            <div id="error-message" class="alert alert-danger text-center"><%= error_message %></div>
-                        <% } %>
-                    
-                        <% if (success) { %>
-                            <div id="success-message" class="alert alert-success text-center"><%= success %></div>
-                        <% } %>
-                    
                         <button type="submit" class="btn btn-primary btn-block mb-3">Sign Up</button>
                     </form>
                     
                     <div class="text-center">
-                        <button type="button" id="loginButton" class="btn bg-gradient-primary w-100 my-4 mb-2" onclick="window.location.href='/login'">Login</button>
+                      <button type="button" id="loginButton" class="btn bg-gradient-primary w-100 my-4 mb-2" onclick="window.location.href='/auth/login'">Login</button>
+
                     </div>
-                    
                     
                     <div class="col-lg-5 content-right">
                         <img src="http://localhost:5000/assets/images/login/01.png" class="img-fluid image-right" alt=""/>
                     </div>
-                  <div class="col-lg-5 content-right">
-                    <img src="http://localhost:5000/assets/images/login/01.png" class="img-fluid image-right" alt=""/>
                   </div>
                 </div>
               </div>
@@ -90,37 +79,5 @@
 
   <!-- app JavaScript -->
   <script src="http://localhost:5000/assets/js/app.js"></script>
-
-  <script>
-    document.getElementById('signup-form').addEventListener('submit', async function (e) {
-      e.preventDefault();
-
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
-      const confirmPassword = document.getElementById('confirm-password').value;
-      const email = document.getElementById('email').value;
-      const termsAccepted = document.getElementById('terms').checked;
-
-      // Reset error messages
-      document.getElementById('username-error').textContent = '';
-      document.getElementById('password-error').textContent = '';
-      document.getElementById('confirm-password-error').textContent = '';
-      document.getElementById('email-error').textContent = '';
-      document.getElementById('error-message').style.display = 'none';
-
-      // Form validation
-      if (!username || !password || !confirmPassword || !email || !termsAccepted) {
-        if (!username) document.getElementById('username-error').textContent = 'Username is required.';
-        if (!password) document.getElementById('password-error').textContent = 'Password is required.';
-        if (!confirmPassword) document.getElementById('confirm-password-error').textContent = 'Please confirm your password.';
-        if (!email) document.getElementById('email-error').textContent = 'Email is required.';
-        if (!termsAccepted) document.getElementById('error-message').style.display = 'block';
-        return;
-      }
-
-      // Submit the form if everything is valid
-      this.submit();
-    });
-  </script>
 </body>
 </html>

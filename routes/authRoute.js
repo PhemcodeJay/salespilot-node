@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const User = require('../models/user');
-const Feedback = require('../models/contact'); // Assuming Feedback model is available
+const Feedback = require('../models/contact');
 const { sendPasswordResetEmail, sendAccountActivationEmail } = require('../utils/email');
 
 // Load Views
@@ -13,7 +13,7 @@ router.get('/login', (req, res) => {
 });
 
 router.get('/signup', (req, res) => {
-    res.render('auth/signup', { error: null });
+    res.render('auth/signup', { error: null, username: '', email: '', success: null });
 });
 
 router.get('/activate', (req, res) => {
@@ -28,84 +28,86 @@ router.get('/recoverpwd', (req, res) => {
     res.render('auth/recoverpwd', { error: null });
 });
 
+app.post('/signup', (req, res) => {
+    let email_error = null;
+  
+    // Validate email or other fields
+    if (!validateEmail(req.body.email)) {
+      email_error = "Invalid email address";
+    }
+  
+    res.render('auth/signup', {
+      email_error: email_error,
+      email: req.body.email
+    });
+  });
+  
 
 // Signup Route
 router.post('/signup', async (req, res) => {
     const errors = validationResult(req);
     const { username, password, confirm_password, email } = req.body;
 
-    // If there are validation errors, return them with input values
     if (!errors.isEmpty()) {
         return res.render('auth/signup', {
-            error_message: errors.array().map(err => err.msg).join(', '), // Combine errors into one message
-            username: username,  // Pass username entered by the user
-            email: email,        // Pass email entered by the user
-            password: password,  // Pass password entered by the user
-            confirm_password: confirm_password,  // Pass confirm_password entered by the user
-            success: null         // Clear any success message if errors occur
+            error_message: errors.array().map(err => err.msg).join(', '),
+            username,
+            email,
+            password,
+            confirm_password,
+            success: null
         });
     }
 
-    // Ensure password and confirm password match
     if (password !== confirm_password) {
         return res.render('auth/signup', {
-            error_message: 'Passwords do not match.',  // Error message if passwords do not match
-            username: username,  // Pass username entered by the user
-            email: email,        // Pass email entered by the user
-            success: null         // Clear any success message if passwords do not match
+            error_message: 'Passwords do not match.',
+            username,
+            email,
+            success: null
         });
     }
 
     try {
-        // Check if the user already exists based on the email
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.render('auth/signup', {
-                error_message: 'User already exists. Please use a different email.',  // Error message for existing user
-                username: username,  // Pass username entered by the user
-                email: email,        // Pass email entered by the user
-                success: null         // Clear any success message if the user already exists
+                error_message: 'User already exists. Please use a different email.',
+                username,
+                email,
+                success: null
             });
         }
 
-        // Hash the password before saving it to the database
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create a new user object
         const newUser = new User({
             username,
             email,
             password: hashedPassword,
-            isActive: false,  // User is inactive until account activation
+            isActive: false,
         });
 
-        // Save the new user to the database
         await newUser.save();
-
-        // Send account activation email
         sendAccountActivationEmail(newUser.email, newUser._id);
 
-        // Render the signup page with a success message
         res.render('auth/signup', {
-            error_message: null, // Clear any error message
-            username: username,  // Pass username entered by the user
-            email: email,        // Pass email entered by the user
-            success: 'User registered successfully. Please check your email to activate your account.'  // Success message
+            error_message: null,
+            username,
+            email,
+            success: 'User registered successfully. Please check your email to activate your account.'
         });
-
     } catch (error) {
         console.error(error);
-        // Handle server error
         res.render('auth/signup', {
-            error_message: 'Server error. Please try again later.',  // General error message
-            username: username,  // Pass username entered by the user
-            email: email,        // Pass email entered by the user
-            success: null         // Clear any success message in case of an error
+            error_message: 'Server error. Please try again later.',
+            username,
+            email,
+            success: null
         });
     }
 });
-
 
 // Account Activation Route
 router.post('/activate', async (req, res) => {
@@ -119,7 +121,6 @@ router.post('/activate', async (req, res) => {
             });
         }
 
-        // Activate user account
         user.isActive = true;
         await user.save();
 
@@ -140,7 +141,7 @@ router.post('/login', async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.render('auth/login', {
-            error: errors.array().map(err => err.msg).join(', ') // Pass the error message to the view
+            error: errors.array().map(err => err.msg).join(', ')
         });
     }
 
@@ -170,7 +171,7 @@ router.post('/login', async (req, res) => {
         const payload = { userId: user._id };
         const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        res.redirect('/dashboard'); // Redirect to the dashboard (you can change this route as needed)
+        res.redirect('/dashboard');
     } catch (error) {
         console.error(error);
         res.render('auth/login', {
@@ -178,7 +179,6 @@ router.post('/login', async (req, res) => {
         });
     }
 });
-
 
 // Password Reset Request Route
 router.post('/passwordreset', async (req, res) => {
@@ -251,7 +251,7 @@ router.post('/resetpassword', async (req, res) => {
         user.password = hashedPassword;
         await user.save();
 
-        res.redirect('/auth/login'); // Redirect to login after password reset
+        res.redirect('/auth/login');
     } catch (error) {
         console.error(error);
         res.render('auth/recoverpwd', {
@@ -269,14 +269,13 @@ router.post('/submit-feedback', async (req, res) => {
     const { rating, comments } = req.body;
 
     try {
-        // Save feedback to the database or perform any other action you want
         const feedback = new Feedback({
             rating,
             comments,
             submittedAt: new Date()
         });
 
-        await feedback.save(); // Assuming you have a Feedback model set up
+        await feedback.save();
 
         res.render('auth/feedback', {
             error: null,
@@ -291,5 +290,4 @@ router.post('/submit-feedback', async (req, res) => {
     }
 });
 
-// Export the router
 module.exports = router;
