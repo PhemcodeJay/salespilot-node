@@ -29,19 +29,19 @@
                                             <h2 class="mb-2" style="font-weight: bold; text-decoration: underline;">Account Activation</h2>
 
                                             <!-- Success Message -->
-                                            <div id="success-message" style="display: none;">
+                                            <div id="success-message" style="display: <%= successMessage ? 'block' : 'none' %>;">
                                                 <p style="font-weight: bold; text-decoration: underline;">Your account has been successfully activated. You can now log in.</p>
                                                 <a href="/login.html" class="btn btn-primary mt-3" style="font-weight: bold; text-decoration: underline;">Go to Login</a>
                                             </div>
 
                                             <!-- Error Message -->
-                                            <div id="error-message" style="display: none;">
+                                            <div id="error-message" style="display: <%= errorMessage ? 'block' : 'none' %>;">
                                                 <p style="font-weight: bold; text-decoration: underline; color: red;">Activation failed. Please check the link and try again.</p>
                                                 <a href="/signup.html" class="btn btn-primary mt-3" style="font-weight: bold; text-decoration: underline;">Try Again</a>
                                             </div>
 
                                             <!-- Activation Form -->
-                                            <div id="activation-form" style="display: none;">
+                                            <div id="activation-form" style="display: <%= !activationToken ? 'block' : 'none' %>;">
                                                 <form method="POST" action="/activate">
                                                     <label for="activation-code" style="font-weight: bold; text-decoration: underline;">Enter Activation Code:</label>
                                                     <input type="text" id="activation-code" name="activation_code" required placeholder="Enter your activation code" class="form-control mt-2" />

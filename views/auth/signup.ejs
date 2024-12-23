@@ -33,30 +33,32 @@
                       <h2 class="mb-2">Sign Up</h2>
                       <p>Create your SalesPilot account.</p>
                       <form id="signup-form" autocomplete="off">
-                        <div id="error-message" class="alert alert-danger text-center" style="display: none;"></div>
+                        <% if (error_message) { %>
+                          <div id="error-message" class="alert alert-danger text-center"><%= error_message %></div>
+                        <% } %>
 
                         <div class="input-group input-group-outline mb-3">
-                          <input type="text" id="username" class="form-control" placeholder="Enter your username" required>
-                          <small id="username-error" class="text-danger"></small>
+                          <input type="text" id="username" class="form-control" placeholder="Enter your username" required value="<%= username || '' %>">
+                          <small id="username-error" class="text-danger"><%= username_error || '' %></small>
                         </div>
                         
                         <div class="input-group input-group-outline mb-3">
                           <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
-                          <small id="password-error" class="text-danger"></small>
+                          <small id="password-error" class="text-danger"><%= password_error || '' %></small>
                         </div>
                         
                         <div class="input-group input-group-outline mb-3">
                           <input type="password" id="confirm-password" class="form-control" placeholder="Confirm your password" required>
-                          <small id="confirm-password-error" class="text-danger"></small>
+                          <small id="confirm-password-error" class="text-danger"><%= confirm_password_error || '' %></small>
                         </div>
 
                         <div class="input-group input-group-outline mb-3">
-                          <input type="email" id="email" class="form-control" placeholder="Enter your email" required>
-                          <small id="email-error" class="text-danger"></small>
+                          <input type="email" id="email" class="form-control" placeholder="Enter your email" required value="<%= email || '' %>">
+                          <small id="email-error" class="text-danger"><%= email_error || '' %></small>
                         </div>
 
                         <div class="form-check form-check-info text-start ps-0">
-                          <input class="form-check-input" type="checkbox" id="terms" required>
+                          <input class="form-check-input" type="checkbox" id="terms" required <%= terms_checked ? 'checked' : '' %>>
                           <label class="form-check-label" for="terms">
                             I agree to the <a href="javascript:;" class="text-dark font-weight-bolder">Terms and Conditions</a>
                           </label>

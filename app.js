@@ -1,3 +1,4 @@
+// Required dependencies
 const express = require('express');
 const path = require('path');
 const mysql = require('mysql2');
@@ -10,6 +11,7 @@ const { generateToken, verifyToken } = require('./config/auth'); // JWT helper
 const openai = require('openai'); // OpenAI SDK for tenant use cases
 const paypalClient = require('./config/paypalconfig'); // PayPal client configuration
 require('./config/passport')(passport); // Passport configuration
+const csrf = require('csurf');
 
 // Initialize Express App
 const app = express();
@@ -56,6 +58,25 @@ app.use('/home_assets', express.static(path.join(__dirname, 'public', 'home_asse
 // Set EJS as the view engine
 app.set('view engine', 'ejs');
 
+// Middleware to parse the body of requests
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+// CSRF Protection Middleware
+const csrfProtection = csrf({ cookie: true });
+
+// CSRF-protected form route
+app.get('/form', csrfProtection, (req, res) => {
+    res.send(`<form action="/submit" method="POST">
+                 <input type="hidden" name="_csrf" value="${req.csrfToken()}">
+                 <button type="submit">Submit</button>
+              </form>`);
+});
+
+app.post('/submit', csrfProtection, (req, res) => {
+    res.send('Form submitted successfully!');
+});
+
 // Set the views folder to 'views'
 app.set('views', path.join(__dirname, 'views'));
 
@@ -64,17 +85,41 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Render 'index.ejs' from 'views/home'
 app.get('/', (req, res) => {
-    const loginLink = '/login'; // Or any link you want for the login page
+    const loginLink = '/auth/login'; // Link to login page
     res.render('home/index', { loginLink: loginLink }); // Pass loginLink here
 });
 
-app.get('/', (req, res) => {
-    const loginLink = '/login'; // Define the login link
-    res.render('home/index', { loginLink: loginLink }); // Pass loginLink here
+app.get('/reset-password', (req, res) => {
+    res.render('reset-password', {
+        csrf_token: req.csrfToken(),
+        reset_code: req.query.token
+    });
+});
+
+// Define the route for login (Only once)
+app.get('/auth/login', (req, res) => {
+    res.render('auth/login');  // Render the login.ejs file
+});
+
+// Route to render the activation page
+app.get('/activate', (req, res) => {
+    const activationToken = req.query.token;
+    let successMessage = null;
+    let errorMessage = null;
+
+    if (activationToken) {
+        successMessage = true; // Simulate successful activation
+    }
+
+    res.render('activation', {
+        successMessage: successMessage,
+        errorMessage: errorMessage,
+        activationToken: activationToken
+    });
 });
 
 // Import routes
-const authRoutes = require('./routes/authRoute'); // Correct path to your auth route file
+const authRoutes = require('./routes/authRoute');
 const dashboardRoutes = require('./routes/dashboardRoute');
 const supplierRoutes = require('./routes/supplierRoute');
 const invoiceRoutes = require('./routes/invoiceRoute');
@@ -94,10 +139,10 @@ const payRoutes = require('./routes/payRoute');
 const profileRoutes = require('./routes/profileRoute');
 const staffRoutes = require('./routes/staffRoute');
 const subscriptionRoutes = require('./routes/subscriptionRoute');
-const pdfRoute = require('./routes/pdfRoute'); // Ensure pdfRoute is imported
+const pdfRoute = require('./routes/pdfRoute');
 
 // Use routes
-app.use('/auth', authRoutes); 
+app.use('/auth', authRoutes);
 app.use('/dashboard', dashboardRoutes);
 app.use('/supplier', supplierRoutes);
 app.use('/invoice', invoiceRoutes);

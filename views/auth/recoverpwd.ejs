@@ -40,15 +40,19 @@
                                             <form id="reset-password-form" method="post" action="/password-recovery">
                                                 <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
                                                 
+
                                                 <div class="row">
                                                     <div class="col-lg-12">
                                                         <div class="floating-label form-group">
                                                             <input class="floating-input form-control" type="email" name="Email" id="email" placeholder="Enter Your Email Address" required>
                                                             <label for="email">Email</label>
+                                                            <small id="email-error" class="text-danger"></small>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <button id="resetButton" type="submit" class="btn btn-primary" name="request_reset">Reset</button>
+                                                <div class="text-center">
+                                                    <button id="resetButton" type="submit" class="btn btn-primary" name="request_reset">Reset</button>
+                                                </div>
                                             </form>
                                         </div>
                                     </div>
@@ -70,32 +74,38 @@
     <script src="/assets/js/app.js"></script>
 
     <script>
-        document.getElementById('resetButton').addEventListener('click', function(event) {
+        document.getElementById('reset-password-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
             const email = document.getElementById('email').value;
             const errorMessage = document.getElementById('error-message');
             const successMessage = document.getElementById('success-message');
+            const emailError = document.getElementById('email-error');
+
+            // Reset messages
             errorMessage.style.display = 'none';
             successMessage.style.display = 'none';
+            emailError.textContent = '';
 
             // Validate email format
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
-                errorMessage.textContent = 'Please enter a valid email address.';
-                errorMessage.style.display = 'block';
-                event.preventDefault();
+                emailError.textContent = 'Please enter a valid email address.';
                 return;
             }
 
             const confirmReset = confirm('Are you sure you want to request a password reset?');
 
             if (!confirmReset) {
-                event.preventDefault();
                 return;
             }
 
             // Assuming successful form submission, you can display a success message
             successMessage.textContent = 'If your email is registered, you will receive an email with instructions to reset your password.';
             successMessage.style.display = 'block';
+
+            // Optionally submit the form via AJAX or traditional form submission.
+            this.submit();
         });
     </script>
 </body>

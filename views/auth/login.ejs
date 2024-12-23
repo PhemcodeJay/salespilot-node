@@ -30,17 +30,17 @@
                 </div>
               </div>
               <div class="card-body">
-                <?php if (!empty($login_err)): ?>
-                  <div class="alert alert-danger text-center"><?php echo $login_err; ?></div>
-                <?php endif; ?>
+                <% if (login_err) { %>
+                  <div class="alert alert-danger text-center"><%= login_err %></div>
+                <% } %>
                 <form action="/login" method="post" class="text-start">
                   <div class="input-group input-group-outline my-3">
-                    <input type="text" name="username" class="form-control" placeholder="Username" value="<?php echo htmlspecialchars($username ?? '', ENT_QUOTES); ?>">
-                    <small class="text-danger"><?php echo $username_err; ?></small>
+                    <input type="text" name="username" class="form-control" placeholder="Username" value="<%= username || '' %>">
+                    <small class="text-danger"><%= username_err || '' %></small>
                   </div>
                   <div class="input-group input-group-outline mb-3">
                     <input type="password" name="password" class="form-control" placeholder="Password">
-                    <small class="text-danger"><?php echo $password_err; ?></small>
+                    <small class="text-danger"><%= password_err || '' %></small>
                   </div>
                   <div class="form-check form-switch d-flex align-items-center mb-3">
                     <input class="form-check-input" type="checkbox" id="rememberMe">
@@ -64,7 +64,7 @@
         <div class="container">
           <div class="row align-items-center justify-content-lg-between">
             <div class="col-12 col-md-6 text-center text-md-start">
-              <p class="text-white mb-0">© <?php echo date('Y'); ?> Developed for <a href="https://phemcode.cybertrendhub.store/index.html" class="text-white">SalesPilot</a>.</p>
+              <p class="text-white mb-0">© <%= new Date().getFullYear() %> Developed for <a href="https://phemcode.cybertrendhub.store/index.html" class="text-white">SalesPilot</a>.</p>
             </div>
           </div>
         </div>
