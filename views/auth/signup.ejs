@@ -6,12 +6,12 @@
   <title>Register</title>
   
   <!-- Favicon -->
-  <link rel="shortcut icon" href="http://localhost:3000/assets/images/favicon.ico" />
-  <link rel="stylesheet" href="http://localhost:3000/assets/css/backend-plugin.min.css">
-  <link rel="stylesheet" href="http://localhost:3000/assets/css/backend.css?v=1.0.0">
-  <link rel="stylesheet" href="http://localhost:3000/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css">
-  <link rel="stylesheet" href="http://localhost:3000/assets/vendor/line-awesome/dist/line-awesome/css/line-awesome.min.css">
-  <link rel="stylesheet" href="http://localhost:3000/assets/vendor/remixicon/fonts/remixicon.css">  
+  <link rel="shortcut icon" href="http://localhost:5000/assets/images/favicon.ico" />
+  <link rel="stylesheet" href="http://localhost:5000/assets/css/backend-plugin.min.css">
+  <link rel="stylesheet" href="http://localhost:5000/assets/css/backend.css?v=1.0.0">
+  <link rel="stylesheet" href="http://localhost:5000/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css">
+  <link rel="stylesheet" href="http://localhost:5000/assets/vendor/line-awesome/dist/line-awesome/css/line-awesome.min.css">
+  <link rel="stylesheet" href="http://localhost:5000/assets/vendor/remixicon/fonts/remixicon.css">  
 </head>
 <body>
   <!-- loader Start -->
@@ -32,50 +32,50 @@
                     <div class="p-3">
                       <h2 class="mb-2">Sign Up</h2>
                       <p>Create your SalesPilot account.</p>
-                      <form id="signup-form" autocomplete="off">
+                      <form id="signup-form" autocomplete="off" method="POST" action="/auth/signup">
                         <% if (error_message) { %>
-                          <div id="error-message" class="alert alert-danger text-center"><%= error_message %></div>
+                            <div id="error-message" class="alert alert-danger text-center"><%= error_message %></div>
                         <% } %>
-
+                    
                         <div class="input-group input-group-outline mb-3">
-                          <input type="text" id="username" class="form-control" placeholder="Enter your username" required value="<%= username || '' %>">
-                          <small id="username-error" class="text-danger"><%= username_error || '' %></small>
+                            <input type="text" id="username" name="username" class="form-control" placeholder="Enter your username" required value="<%= username || '' %>">
+                            <small id="username-error" class="text-danger"><%= username_error || '' %></small>
                         </div>
-                        
+                    
                         <div class="input-group input-group-outline mb-3">
-                          <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
-                          <small id="password-error" class="text-danger"><%= password_error || '' %></small>
+                            <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
+                            <small id="password-error" class="text-danger"><%= password_error || '' %></small>
                         </div>
-                        
+                    
                         <div class="input-group input-group-outline mb-3">
-                          <input type="password" id="confirm-password" class="form-control" placeholder="Confirm your password" required>
-                          <small id="confirm-password-error" class="text-danger"><%= confirm_password_error || '' %></small>
+                            <input type="password" id="confirm-password" name="confirm_password" class="form-control" placeholder="Confirm your password" required>
+                            <small id="confirm-password-error" class="text-danger"><%= confirm_password_error || '' %></small>
                         </div>
-
+                    
                         <div class="input-group input-group-outline mb-3">
-                          <input type="email" id="email" class="form-control" placeholder="Enter your email" required value="<%= email || '' %>">
-                          <small id="email-error" class="text-danger"><%= email_error || '' %></small>
+                            <input type="email" id="email" name="email" class="form-control" placeholder="Enter your email" required value="<%= email || '' %>">
+                            <small id="email-error" class="text-danger"><%= email_error || '' %></small>
                         </div>
-
+                    
                         <div class="form-check form-check-info text-start ps-0">
-                          <input class="form-check-input" type="checkbox" id="terms" required <%= terms_checked ? 'checked' : '' %>>
-                          <label class="form-check-label" for="terms">
-                            I agree to the <a href="javascript:;" class="text-dark font-weight-bolder">Terms and Conditions</a>
-                          </label>
+                            <input class="form-check-input" type="checkbox" id="terms" name="terms" required <%= terms_checked ? 'checked' : '' %> >
+                            <label class="form-check-label" for="terms">
+                                I agree to the <a href="javascript:;" class="text-dark font-weight-bolder">Terms and Conditions</a>
+                            </label>
                         </div>
-                        
+                    
                         <div class="text-center">
-                          <button type="submit" class="btn btn-lg bg-gradient-primary w-100 mt-4 mb-0">Sign Up</button>
+                            <button type="submit" class="btn btn-lg bg-gradient-primary w-100 mt-4 mb-0">Sign Up</button>
                         </div>
-                      </form>
-                      
+                    </form>
+                    
                       <div class="text-center">
                         <button type="button" id="loginButton" class="btn bg-gradient-primary w-100 my-4 mb-2" onclick="window.location.href='/login'">Login</button>
                       </div>
                     </div>
                   </div>
                   <div class="col-lg-5 content-right">
-                    <img src="http://localhost:3000/assets/images/login/01.png" class="img-fluid image-right" alt=""/>
+                    <img src="http://localhost:5000/assets/images/login/01.png" class="img-fluid image-right" alt=""/>
                   </div>
                 </div>
               </div>
@@ -87,13 +87,13 @@
   </div>
 
   <!-- Backend Bundle JavaScript -->
-  <script src="http://localhost:3000/assets/js/backend-bundle.min.js"></script>
+  <script src="http://localhost:5000/assets/js/backend-bundle.min.js"></script>
 
   <!-- Table Treeview JavaScript -->
-  <script src="http://localhost:3000/assets/js/table-treeview.js"></script>
+  <script src="http://localhost:5000/assets/js/table-treeview.js"></script>
 
   <!-- app JavaScript -->
-  <script src="http://localhost:3000/assets/js/app.js"></script>
+  <script src="http://localhost:5000/assets/js/app.js"></script>
 
   <script>
     document.getElementById('signup-form').addEventListener('submit', async function (e) {
@@ -131,7 +131,7 @@
       }
 
       try {
-        const response = await fetch('/signup', {
+        const response = await fetch('/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password, email }),
@@ -141,7 +141,7 @@
 
         if (response.ok) {
           // Redirect to login page on successful signup
-          window.location.href = '/login.html';
+          window.location.href = '/login';
         } else {
           document.getElementById('error-message').textContent = data.error || 'An error occurred. Please try again.';
           document.getElementById('error-message').style.display = 'block';

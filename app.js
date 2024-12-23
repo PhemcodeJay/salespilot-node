@@ -12,188 +12,113 @@ const openai = require('openai'); // OpenAI SDK for tenant use cases
 const paypalClient = require('./config/paypalconfig'); // PayPal client configuration
 require('./config/passport')(passport); // Passport configuration
 const csrf = require('csurf');
-const flash = require('connect-flash');
+const flash = require('connect-flash'); // For flash messages
 
 // Initialize Express App
 const app = express();
+
+// Set up view engine
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+// Middleware
+app.use(express.static(path.join(__dirname, 'public'))); // Static files (CSS, JS, Images)
+app.use(bodyParser.urlencoded({ extended: false })); // Parse form data
+app.use(bodyParser.json()); // Parse JSON data
+
+// Session Configuration
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'defaultsecret',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false, httpOnly: true, maxAge: 3600000 } // 1 hour session
+}));
+
+// Flash messages middleware
+app.use(flash());
+
+// CSRF protection middleware
+const csrfProtection = csrf({ cookie: true });
+app.use(csrfProtection);
+
+// Initialize Passport and session
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Database Connection
 const db = mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'dbs13455438',
+    password: process.env.DB_PASS || '',
+    database: process.env.DB_NAME || 'dbs13455438'
 });
 
-// Check Database Connection
-db.connect((err) => {
-    if (err) {
-        console.error('Database connection error:', err);
-        process.exit(1); // Exit the application if DB connection fails
-    }
-    console.log('Connected to the MySQL database.');
+// OpenAI client setup (Optional)
+const openAIClient = new openai.OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Middleware Setup
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// PayPal client configuration (Optional)
+const paypal = paypalClient;
 
-// Session Configuration
-app.use(
-    session({
-        secret: process.env.SESSION_SECRET || 'your-secret-key',
-        resave: false,
-        saveUninitialized: true,
-        cookie: { secure: false }, // Set to true if using HTTPS
-    })
-);
+// Global route handlers (for views or actions)
 
-// Flash middleware must be used before routes
-app.use(flash());
-
-// Passport Middleware
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Serve Static Files
-app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
-app.use('/home_assets', express.static(path.join(__dirname, 'public', 'home_assets')));
-
-// Set EJS as the view engine
-app.set('view engine', 'ejs');
-
-// Middleware to parse the body of requests
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-
-// CSRF Protection Middleware
-const csrfProtection = csrf({ cookie: true });
-
-// CSRF-protected form route
-app.get('/form', csrfProtection, (req, res) => {
-    res.send(`<form action="/submit" method="POST">
-                 <input type="hidden" name="_csrf" value="${req.csrfToken()}">
-                 <button type="submit">Submit</button>
-              </form>`);
-});
-
-app.post('/submit', csrfProtection, (req, res) => {
-    res.send('Form submitted successfully!');
-});
-
-// Set the views folder to 'views'
-app.set('views', path.join(__dirname, 'views'));
-
-// Serve static files (CSS, JS, images, etc.) from the public directory
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Render 'index.ejs' from 'views/home'
+// Home Route (Landing page or dashboard)
 app.get('/', (req, res) => {
-    const loginLink = '/auth/login'; // Link to login page
-    res.render('home/index', { loginLink: loginLink }); // Pass loginLink here
-});
-
-// Login route (Render Login Page)
-app.get('/auth/login', (req, res) => {
-    if (req.isAuthenticated()) {
-        // Redirect to the dashboard if already logged in
-        return res.redirect('/dashboard');
-    }
-    res.render('auth/login', {
-        login_err: req.flash('login_err'), // Assuming you're using flash messages
-        username: req.flash('username'),
-        username_err: req.flash('username_err')
+    res.render('index', {
+        csrfToken: req.csrfToken(), // CSRF token for security
+        user: req.user || null // User data if logged in
     });
 });
 
-// Signup route (Handle Signup Logic)
-app.post('/auth/signup', (req, res) => {
-    const { username, email, password } = req.body;
-    let errorMessage = '';
-
-    if (!username || !email || !password) {
-        errorMessage = 'All fields are required.';
-        return res.render('auth/signup', { errorMessage });
-    }
-
-    bcrypt.hash(password, 10, (err, hashedPassword) => {
-        if (err) {
-            return res.status(500).send('Error hashing password');
-        }
-
-        const query = 'INSERT INTO users (username, email, password) VALUES (?, ?, ?)';
-        db.query(query, [username, email, hashedPassword], (err, results) => {
-            if (err) {
-                return res.status(500).send('Error saving user');
-            }
-
-            // Send activation email here (example placeholder)
-            res.redirect('/activate');
-        });
-    });
-});
-
-// Activation route (Handle Account Activation)
-app.get('/activate', (req, res) => {
-    const activationToken = req.query.token;
-    if (activationToken) {
-        // Here you would verify the token and activate the user's account
-        res.render('activation', { successMessage: 'Account activated successfully' });
-    } else {
-        res.render('activation', { errorMessage: 'Invalid or missing activation token' });
-    }
-});
-
-// Dashboard Route (Protected with Authentication Check)
-app.get('/dashboard', (req, res) => {
-    if (!req.isAuthenticated()) {
-        return res.redirect('/auth/login'); // Redirect to login if not authenticated
-    }
-    res.render('dashboard');
-});
-
-
-// Logout Route (Handle Logout Logic)
-app.get('/logout', (req, res) => {
-    req.logout((err) => {
-        if (err) {
-            return next(err);
-        }
-        res.redirect('/auth/login'); // Redirect to login after logout
-    });
-});
-
-// Import routes
+// Auth Routes (Login, Signup, etc.)
 const authRoutes = require('./routes/authRoute');
-const dashboardRoutes = require('./routes/dashboardRoute');
+app.use(authRoutes);
 
-// Use routes
-app.use('/auth', authRoutes);
-app.use('/dashboard', dashboardRoutes);
-
-// Default Route for Undefined Paths
-app.use((req, res) => {
-    res.status(404).json({ message: 'Route not found' });
+// Example of protected route
+app.get('/dashboard', verifyToken, (req, res) => {
+    res.render('dashboard', { user: req.user });
 });
 
-// Global Error Handler
-app.use((err, req, res, next) => {
-    console.error('Error:', err);
-    res.status(500).json({ message: 'Internal Server Error', error: err.message });
+// Example of an openai interaction
+app.post('/openai', async (req, res) => {
+    try {
+        const { prompt } = req.body;
+        const response = await openAIClient.completions.create({
+            model: 'text-davinci-003',
+            prompt: prompt,
+            max_tokens: 100,
+        });
+        res.json({ response: response.choices[0].text });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to interact with OpenAI' });
+    }
 });
 
-// Flash middleware - must be used after session setup and before routes
+// PayPal payment example route
+app.post('/paypal/payment', async (req, res) => {
+    const paymentData = req.body; // Process payment data from form submission
+    try {
+        const payment = await paypal.payment.create(paymentData);
+        res.json({ payment });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to process PayPal payment' });
+    }
+});
+
+// Error Handling (404 and others)
 app.use((req, res, next) => {
-  res.locals.success_msg = req.flash('success_msg');
-  res.locals.error_msg = req.flash('error_msg');
-  res.locals.error = req.flash('error');
-  next();
+    res.status(404).render('404'); // Render a 404 page
 });
 
-// Start Server
-const PORT = process.env.PORT || 5000;
+// General Error Handler
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send('Something went wrong!');
+});
+
+// Start the server
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
-
-module.exports = app;

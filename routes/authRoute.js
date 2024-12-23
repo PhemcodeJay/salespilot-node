@@ -1,33 +1,63 @@
 const express = require('express');
 const router = express.Router();
-const authcontroller = require('../controllers/authcontroller');
+const authController = require('../controllers/authcontroller');
 
-// Signup route
-router.post('/auth/signup', authcontroller.signup);
+// Signup route (POST for handling signup)
+router.post('/auth/signup', async (req, res) => {
+    try {
+        // Extract form data
+        const { username, password, confirm_password, email, terms } = req.body;
+
+        // Validation checks
+        const errorMessages = {};
+
+        if (!username) errorMessages.username_error = 'Username is required.';
+        if (!password) errorMessages.password_error = 'Password is required.';
+        if (password !== confirm_password) errorMessages.confirm_password_error = 'Passwords do not match.';
+        if (!email) errorMessages.email_error = 'Email is required.';
+        if (!terms) errorMessages.terms_error = 'You must agree to the terms and conditions.';
+
+        if (Object.keys(errorMessages).length > 0) {
+            return res.status(400).json({ error: 'Validation failed', errorMessages });
+        }
+
+        // If validation passes, attempt to create user account
+        const result = await authController.signup(req, res);
+        res.status(200).json({ message: 'Account created successfully', data: result });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Render Signup page route (GET for showing signup form)
+router.get('/auth/signup', (req, res) => {
+    res.render('auth/signup', {
+        error_message: req.flash('signup_err') || '', // Display any error message from flash
+        username: req.flash('username') || '',        // Pre-fill username if there's a previous error
+        username_error: req.flash('username_err') || '', // Display any error related to username
+        password_error: req.flash('password_err') || '', // Display any error related to password
+        confirm_password_error: req.flash('confirm_password_err') || '', // Display confirm password error
+        email_error: req.flash('email_err') || '', // Display email error
+        terms_error: req.flash('terms_err') || ''  // Display terms error
+    });
+});
 
 // Activate account route
-router.post('/auth/activate', authcontroller.activateAccount);
-
-// Login route (POST for handling login submission)
-router.post('/auth/login', authcontroller.login);
-
-
+router.post('/auth/activate', authController.activateAccount);
 
 // Login route (POST for handling login submission)
 router.post('/auth/login', async (req, res) => {
     try {
-        const response = await authcontroller.login(req, res);
-        // If login is successful, send the token or redirect to dashboard
-        res.json(response);
+        await authController.login(req, res); // Call the login method from controller
     } catch (error) {
-        // Redirect with error message to login page or show flash message
-        req.flash('login_err', 'Invalid email or password');
-        res.redirect('/login');
+        req.flash('login_err', 'Invalid username or password');
+        res.redirect('/auth/login');
     }
 });
 
 // Render Login page route (GET for showing login form)
-router.get('/login', (req, res) => {
+router.get('/auth/login', (req, res) => {
     res.render('auth/login', {
         login_err: req.flash('login_err') || '',  // Default to an empty string if not set
         username: req.flash('username') || '',    // Similarly for username
@@ -36,29 +66,29 @@ router.get('/login', (req, res) => {
 });
 
 // Feedback route (POST for sending feedback)
-router.post('/auth/feedback', authcontroller.sendFeedback);
+router.post('/auth/feedback', authController.sendFeedback);
 
 // Render Feedback page route (GET for rendering feedback form)
-router.get('/feedback', (req, res) => {
+router.get('/auth/feedback', (req, res) => {
     res.render('auth/feedback', {
         feedback_err: req.flash('feedback_err') || ''  // Default to an empty string if not set
     });
 });
 
 // Subscription route (POST for managing subscription)
-router.post('/subscription', authcontroller.manageSubscription);
+router.post('/auth/subscription', authController.manageSubscription);
 
 // Render Subscription page route (GET for showing subscription form)
-router.get('/subscription', (req, res) => {
+router.get('/auth/subscription', (req, res) => {
     res.render('auth/subscription', {
         subscription_err: req.flash('subscription_err') || ''  // Default to an empty string if not set
     });
 });
 
 // Logout route (GET to log out user)
-router.get('/logout', (req, res) => {
+router.get('/auth/logout', (req, res) => {
     res.clearCookie('jwt');  // If you store JWT in cookies
-    res.redirect('/login');
+    res.redirect('/auth/login');
 });
 
 module.exports = router;
