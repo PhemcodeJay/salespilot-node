@@ -1,124 +1,149 @@
-// Required dependencies
+const punycode = require('punycode/');
+require('dotenv').config(); // Load environment variables from .env file
 const express = require('express');
-const path = require('path');
 const mysql = require('mysql2');
+const path = require('path');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const passport = require('passport');
 const bcrypt = require('bcryptjs'); // For password hashing
-require('dotenv').config(); // Load environment variables from .env file
 const { generateToken, verifyToken } = require('./config/auth'); // JWT helper
 const openai = require('openai'); // OpenAI SDK for tenant use cases
 const paypalClient = require('./config/paypalconfig'); // PayPal client configuration
 require('./config/passport')(passport); // Passport configuration
-const csrf = require('csurf');
-const flash = require('connect-flash'); // For flash messages
+
 
 // Initialize Express App
 const app = express();
-
-// Set up view engine
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-
-// Middleware
-app.use(express.static(path.join(__dirname, 'public'))); // Static files (CSS, JS, Images)
-app.use(bodyParser.urlencoded({ extended: false })); // Parse form data
-app.use(bodyParser.json()); // Parse JSON data
-
-// Session Configuration
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'defaultsecret',
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false, httpOnly: true, maxAge: 3600000 } // 1 hour session
-}));
-
-// Flash messages middleware
-app.use(flash());
-
-// CSRF protection middleware
-const csrfProtection = csrf({ cookie: true });
-app.use(csrfProtection);
-
-// Initialize Passport and session
-app.use(passport.initialize());
-app.use(passport.session());
 
 // Database Connection
 const db = mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASS || '',
-    database: process.env.DB_NAME || 'dbs13455438'
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'dbs13455438',
 });
 
-// OpenAI client setup (Optional)
-const openAIClient = new openai.OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+// Check Database Connection
+db.connect((err) => {
+    if (err) {
+        console.error('Database connection error:', err);
+        process.exit(1); // Exit the application if DB connection fails
+    }
+    console.log('Connected to the MySQL database.');
 });
 
-// PayPal client configuration (Optional)
-const paypal = paypalClient;
+// Middleware Setup
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Global route handlers (for views or actions)
 
-// Home Route (Landing page or dashboard)
-app.get('/', (req, res) => {
-    res.render('index', {
-        csrfToken: req.csrfToken(), // CSRF token for security
-        user: req.user || null // User data if logged in
-    });
+
+// Session Configuration
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET || 'your-secret-key',
+        resave: false,
+        saveUninitialized: true,
+        cookie: { secure: false }, // Set to true if using HTTPS
+    })
+);
+
+// Passport Middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Serve Static Files
+app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
+app.use('/home_assets', express.static(path.join(__dirname, 'public', 'home_assets')));
+
+// Routes Setup
+const authRoutes = require('./routes/authRoute'); // Ensure this path is correct
+app.use('/auth', authRoutes); // Attach the auth routes to `/auth`
+
+// Other Route Imports
+const routes = {
+    dashboard: require('./routes/dashboardRoute'),
+    supplier: require('./routes/supplierRoute'),
+    invoice: require('./routes/invoiceRoute'),
+    sales: require('./routes/salesRoute'),
+    categoryReport: require('./routes/category-reportRoute'),
+    productReport: require('./routes/product-reportRoute'),
+    product: require('./routes/productRoute'),
+    chart: require('./routes/chartRoute'),
+    chartReport: require('./routes/chart-reportRoute'),
+    category: require('./routes/categoryRoute'),
+    customer: require('./routes/customerRoute'),
+    expense: require('./routes/expenseRoute'),
+    inventory: require('./routes/inventoryRoute'),
+    notification: require('./routes/notificationRoute'),
+    pageAccess: require('./routes/page-accessRoute'),
+    pay: require('./routes/payRoute'),
+    profile: require('./routes/profileRoute'),
+    staff: require('./routes/staffRoute'),
+    subscription: require('./routes/subscriptionRoute'),
+    pdfRoute: require('./routes/pdfRoute'), // Ensure pdfRoute is imported
+};
+
+// Example Routes for Authentication
+app.post('/login', (req, res) => {
+    const { email, password } = req.body;
+    const user = { id: 1, email }; // Replace with your user validation logic
+
+    if (email === 'user@example.com' && password === 'password123') {
+        const token = generateToken(user); // Generate JWT
+        return res.json({ token });
+    }
+    res.status(401).json({ error: 'Invalid credentials.' });
 });
 
-// Auth Routes (Login, Signup, etc.)
-const authRoutes = require('./routes/authRoute');
-app.use(authRoutes);
-
-// Example of protected route
-app.get('/dashboard', verifyToken, (req, res) => {
-    res.render('dashboard', { user: req.user });
+app.get('/profile', verifyToken, (req, res) => {
+    res.json({ user: req.user });
 });
 
-// Example of an openai interaction
-app.post('/openai', async (req, res) => {
+// PayPal Payment Example
+app.post('/create-payment', verifyToken, async (req, res) => {
+    const order = {
+        intent: 'CAPTURE',
+        purchase_units: [
+            { amount: { value: req.body.amount } },
+        ],
+        application_context: {
+            return_url: 'http://localhost:5000/payment-success',
+            cancel_url: 'http://localhost:5000/payment-cancel',
+        },
+    };
+
+    const request = new paypalClient.orders.OrdersCreateRequest();
+    request.requestBody(order);
+
     try {
-        const { prompt } = req.body;
-        const response = await openAIClient.completions.create({
-            model: 'text-davinci-003',
-            prompt: prompt,
-            max_tokens: 100,
-        });
-        res.json({ response: response.choices[0].text });
+        const orderResponse = await paypalClient.execute(request);
+        res.json({ orderId: orderResponse.result.id });
     } catch (error) {
-        res.status(500).json({ error: 'Failed to interact with OpenAI' });
+        console.error(error);
+        res.status(500).json({ error: 'Payment creation failed' });
     }
 });
 
-// PayPal payment example route
-app.post('/paypal/payment', async (req, res) => {
-    const paymentData = req.body; // Process payment data from form submission
-    try {
-        const payment = await paypal.payment.create(paymentData);
-        res.json({ payment });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to process PayPal payment' });
-    }
+// Cron Jobs
+require('./cron/subscriptioncron');
+
+// Default Route for Undefined Paths
+app.use((req, res) => {
+    res.status(404).json({ message: 'Route not found' });
 });
 
-// Error Handling (404 and others)
-app.use((req, res, next) => {
-    res.status(404).render('404'); // Render a 404 page
-});
-
-// General Error Handler
+// Global Error Handler
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send('Something went wrong!');
+    console.error('Error:', err);
+    res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
 
-// Start the server
-const PORT = process.env.PORT || 3000;
+// Start Server
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
+
+module.exports = app;
