@@ -9,6 +9,18 @@ const auth = require('../models/user'); // Assuming you have a User model
 const ActivationCode = require('../models/activation-code');
 const PasswordReset = require('../models/passwordreset');
 const Subscription = require('../models/subscriptions');
+const passport = require('passport');
+
+// Assuming the local strategy is used
+exports.login = (req, res, next) => {
+    passport.authenticate('local', {
+        successRedirect: '/dashboard',
+        failureRedirect: '/auth/login',
+        failureFlash: true, // This line enables failure flash messages
+        successFlash: 'Welcome back!' // Optional success message
+    })(req, res, next);
+};
+
 
 // Database Connection
 const mysql = require('mysql2/promise');
@@ -33,12 +45,16 @@ const transporter = nodemailer.createTransport({
 
 // Utility Function: Send Email
 const sendEmail = async (to, subject, text) => {
-    await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to,
-        subject,
-        text,
-    });
+    try {
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to,
+            subject,
+            text,
+        });
+    } catch (error) {
+        throw new Error('Failed to send email');
+    }
 };
 
 // Auth Controller
@@ -136,30 +152,40 @@ module.exports = {
      */
     login: async (req, res) => {
         const { email, password } = req.body;
-
+        let password_err = '';
+    
         if (!email || !password) {
-            return res.status(400).json({ message: 'Email and password are required.' });
+            password_err = 'Email and password are required.';
+            return res.render('auth/login', { password_err });
         }
-
+    
         try {
             const [user] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
             if (user.length === 0 || !(await bcrypt.compare(password, user[0].password))) {
-                return res.status(401).json({ message: 'Invalid email or password.' });
+                password_err = 'Invalid email or password.';
+                return res.render('auth/login', { password_err });
             }
-
+    
             if (!user[0].is_active) {
-                return res.status(403).json({ message: 'Account is not activated.' });
+                password_err = 'Account is not activated.';
+                return res.render('auth/login', { password_err });
             }
-
+    
             const token = jwt.sign({ id: user[0].id, email: user[0].email }, process.env.JWT_SECRET, {
                 expiresIn: '1h',
             });
-
-            res.status(200).json({ message: 'Login successful!', token });
+    
+            // Store the token in a cookie or session if necessary for client-side authentication
+            res.cookie('auth_token', token, { httpOnly: true, maxAge: 3600000 }); // Example of setting a cookie
+    
+            res.redirect('/dashboard'); // Redirect to the dashboard or another page after successful login
         } catch (error) {
-            res.status(500).json({ message: 'Server error.', error: error.message });
+            password_err = 'Server error occurred. Please try again.';
+            return res.render('auth/login', { password_err });
         }
     },
+    
+
 
     /**
      * Send Feedback
