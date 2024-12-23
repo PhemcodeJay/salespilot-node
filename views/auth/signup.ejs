@@ -34,8 +34,8 @@
                       <p>Create your SalesPilot account.</p>
                       <form id="signup-form" autocomplete="off" method="POST" action="/auth/signup">
                         <% if (error_message) { %>
-                            <div id="error-message" class="alert alert-danger text-center"><%= error_message %></div>
-                        <% } %>
+                          <div id="error-message" class="alert alert-danger text-center"><%= error_message %></div>
+                      <% } %>
                     
                         <div class="input-group input-group-outline mb-3">
                             <input type="text" id="username" name="username" class="form-control" placeholder="Enter your username" required value="<%= username || '' %>">

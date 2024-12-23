@@ -11,6 +11,8 @@ const paypalClient = require('./config/paypalconfig');
 require('dotenv').config();
 require('./config/passport')(passport);
 const flash = require('connect-flash');
+const punycode = require('punycode/');
+
 
 // Initialize Express App
 const app = express();
@@ -41,6 +43,8 @@ app.use(
 );
 app.use(passport.initialize());
 app.use(passport.session());
+
+
 
 // Database Connection
 const db = mysql.createConnection({
@@ -137,6 +141,8 @@ app.use((err, req, res, next) => {
     console.error('Error:', err);
     res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
+
+
 
 // Start Server
 const PORT = process.env.PORT || 5000;

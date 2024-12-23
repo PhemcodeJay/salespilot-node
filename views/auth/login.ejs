@@ -33,9 +33,9 @@
                       <h2 class="mb-2">Login</h2>
                       <p>Welcome back! Please login to your account.</p>
                       <form id="login-form" autocomplete="off">
-                        <% if (login_err) { %>
-                          <div id="error-message" class="alert alert-danger text-center"><%= login_err %></div>
-                        <% } %>
+                        <% if (error_message) { %>
+                          <div id="error-message" class="alert alert-danger text-center"><%= error_message %></div>
+                      <% } %>
 
                         <div class="input-group input-group-outline mb-3">
                           <input type="text" id="username" class="form-control" placeholder="Enter your username" required value="<%= username || '' %>">
@@ -84,49 +84,5 @@
 
   <!-- app JavaScript -->
   <script src="/assets/js/app.js"></script>
-
-  <script>
-    document.getElementById('login-form').addEventListener('submit', async function (e) {
-      e.preventDefault();
-
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
-      const remember = document.getElementById('remember').checked;
-
-      // Reset error messages
-      document.getElementById('username-error').textContent = '';
-      document.getElementById('password-error').textContent = '';
-      document.getElementById('error-message').style.display = 'none';
-
-      // Form validation
-      if (!username || !password) {
-        if (!username) document.getElementById('username-error').textContent = 'Username is required.';
-        if (!password) document.getElementById('password-error').textContent = 'Password is required.';
-        return;
-      }
-
-      try {
-        const response = await fetch('/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password, remember }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          // Redirect to dashboard on successful login
-          window.location.href = '/dashboard';  // Replace with actual dashboard URL
-        } else {
-          document.getElementById('error-message').textContent = data.error || 'Invalid credentials. Please try again.';
-          document.getElementById('error-message').style.display = 'block';
-        }
-      } catch (error) {
-        document.getElementById('error-message').textContent = 'An error occurred. Please try again.';
-        document.getElementById('error-message').style.display = 'block';
-      }
-    });
-  </script>
-  
 </body>
 </html>
