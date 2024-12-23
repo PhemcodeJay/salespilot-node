@@ -6,12 +6,12 @@
   <title>Login</title>
   
   <!-- Favicon -->
-  <link rel="shortcut icon" href="/assets/images/favicon.ico" />
-  <link rel="stylesheet" href="/assets/css/backend-plugin.min.css">
-  <link rel="stylesheet" href="/assets/css/backend.css?v=1.0.0">
-  <link rel="stylesheet" href="/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css">
-  <link rel="stylesheet" href="/assets/vendor/line-awesome/dist/line-awesome/css/line-awesome.min.css">
-  <link rel="stylesheet" href="/assets/vendor/remixicon/fonts/remixicon.css">  
+  <link rel="shortcut icon" href="http://localhost:5000/assets/images/favicon.ico" />
+  <link rel="stylesheet" href="http://localhost:5000/assets/css/backend-plugin.min.css">
+  <link rel="stylesheet" href="http://localhost:5000/assets/css/backend.css?v=1.0.0">
+  <link rel="stylesheet" href="http://localhost:5000/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css">
+  <link rel="stylesheet" href="http://localhost:5000/assets/vendor/line-awesome/dist/line-awesome/css/line-awesome.min.css">
+  <link rel="stylesheet" href="http://localhost:5000/assets/vendor/remixicon/fonts/remixicon.css">  
 </head>
 <body>
   <!-- loader Start -->
@@ -32,11 +32,10 @@
                     <div class="p-3">
                       <h2 class="mb-2">Login</h2>
                       <p>Welcome back! Please login to your account.</p>
-                      <form id="/login" autocomplete="off">
-                       
 
+                      <form action="/login" method="POST" autocomplete="off">
                         <div class="input-group input-group-outline mb-3">
-                          <input type="text" id="username" class="form-control" placeholder="Enter your username" required value="<%= username || '' %>">
+                          <input type="text" id="username" class="form-control" placeholder="Enter your username" required>
                         </div>
 
                         <div class="input-group input-group-outline mb-3">
@@ -61,7 +60,7 @@
                     </div>
                   </div>
                   <div class="col-lg-5 content-right">
-                    <img src="/assets/images/login/01.png" class="img-fluid image-right" alt=""/>
+                    <img src="http://localhost:5000/assets/images/login/01.png" class="img-fluid image-right" alt=""/>
                   </div>
                 </div>
               </div>
@@ -73,12 +72,12 @@
   </div>
 
   <!-- Backend Bundle JavaScript -->
-  <script src="/assets/js/backend-bundle.min.js"></script>
+  <script src="http://localhost:5000/assets/js/backend-bundle.min.js"></script>
 
   <!-- Table Treeview JavaScript -->
-  <script src="/assets/js/table-treeview.js"></script>
+  <script src="http://localhost:5000/assets/js/table-treeview.js"></script>
 
   <!-- app JavaScript -->
-  <script src="/assets/js/app.js"></script>
+  <script src="http://localhost:5000/assets/js/app.js"></script>
 </body>
 </html>

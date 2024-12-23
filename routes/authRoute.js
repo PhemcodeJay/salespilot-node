@@ -28,20 +28,6 @@ router.get('/recoverpwd', (req, res) => {
     res.render('auth/recoverpwd', { error: null });
 });
 
-app.post('/signup', (req, res) => {
-    let email_error = null;
-  
-    // Validate email or other fields
-    if (!validateEmail(req.body.email)) {
-      email_error = "Invalid email address";
-    }
-  
-    res.render('auth/signup', {
-      email_error: email_error,
-      email: req.body.email
-    });
-  });
-  
 
 // Signup Route
 router.post('/signup', async (req, res) => {
