@@ -11,6 +11,9 @@ router.post('/activate', authcontroller.activateAccount);
 // Login route
 router.post('/login', authcontroller.login);
 
+
+
+
 // Feedback route
 router.post('/feedback', authcontroller.sendFeedback);
 

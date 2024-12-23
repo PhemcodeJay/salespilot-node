@@ -1,17 +1,15 @@
-const punycode = require('punycode/');
-require('dotenv').config(); // Load environment variables from .env file
 const express = require('express');
-const mysql = require('mysql2');
 const path = require('path');
+const mysql = require('mysql2');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const passport = require('passport');
 const bcrypt = require('bcryptjs'); // For password hashing
+require('dotenv').config(); // Load environment variables from .env file
 const { generateToken, verifyToken } = require('./config/auth'); // JWT helper
 const openai = require('openai'); // OpenAI SDK for tenant use cases
 const paypalClient = require('./config/paypalconfig'); // PayPal client configuration
 require('./config/passport')(passport); // Passport configuration
-
 
 // Initialize Express App
 const app = express();
@@ -37,8 +35,6 @@ db.connect((err) => {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-
-
 // Session Configuration
 app.use(
     session({
@@ -57,33 +53,71 @@ app.use(passport.session());
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 app.use('/home_assets', express.static(path.join(__dirname, 'public', 'home_assets')));
 
-// Routes Setup
-const authRoutes = require('./routes/authRoute'); // Ensure this path is correct
-app.use('/auth', authRoutes); // Attach the auth routes to `/auth`
+// Set EJS as the view engine
+app.set('view engine', 'ejs');
 
-// Other Route Imports
-const routes = {
-    dashboard: require('./routes/dashboardRoute'),
-    supplier: require('./routes/supplierRoute'),
-    invoice: require('./routes/invoiceRoute'),
-    sales: require('./routes/salesRoute'),
-    categoryReport: require('./routes/category-reportRoute'),
-    productReport: require('./routes/product-reportRoute'),
-    product: require('./routes/productRoute'),
-    chart: require('./routes/chartRoute'),
-    chartReport: require('./routes/chart-reportRoute'),
-    category: require('./routes/categoryRoute'),
-    customer: require('./routes/customerRoute'),
-    expense: require('./routes/expenseRoute'),
-    inventory: require('./routes/inventoryRoute'),
-    notification: require('./routes/notificationRoute'),
-    pageAccess: require('./routes/page-accessRoute'),
-    pay: require('./routes/payRoute'),
-    profile: require('./routes/profileRoute'),
-    staff: require('./routes/staffRoute'),
-    subscription: require('./routes/subscriptionRoute'),
-    pdfRoute: require('./routes/pdfRoute'), // Ensure pdfRoute is imported
-};
+// Set the views folder to 'views'
+app.set('views', path.join(__dirname, 'views'));
+
+// Serve static files (CSS, JS, images, etc.) from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Render 'index.ejs' from 'views/home'
+app.get('/', (req, res) => {
+    const loginLink = '/login'; // Or any link you want for the login page
+    res.render('home/index', { loginLink: loginLink }); // Pass loginLink here
+});
+
+app.get('/', (req, res) => {
+    const loginLink = '/login'; // Define the login link
+    res.render('home/index', { loginLink: loginLink }); // Pass loginLink here
+});
+
+// Import routes
+const authRoutes = require('./routes/authRoute'); // Correct path to your auth route file
+const dashboardRoutes = require('./routes/dashboardRoute');
+const supplierRoutes = require('./routes/supplierRoute');
+const invoiceRoutes = require('./routes/invoiceRoute');
+const salesRoutes = require('./routes/salesRoute');
+const categoryReportRoutes = require('./routes/category-reportRoute');
+const productReportRoutes = require('./routes/product-reportRoute');
+const productRoutes = require('./routes/productRoute');
+const chartRoutes = require('./routes/chartRoute');
+const chartReportRoutes = require('./routes/chart-reportRoute');
+const categoryRoutes = require('./routes/categoryRoute');
+const customerRoutes = require('./routes/customerRoute');
+const expenseRoutes = require('./routes/expenseRoute');
+const inventoryRoutes = require('./routes/inventoryRoute');
+const notificationRoutes = require('./routes/notificationRoute');
+const pageAccessRoutes = require('./routes/page-accessRoute');
+const payRoutes = require('./routes/payRoute');
+const profileRoutes = require('./routes/profileRoute');
+const staffRoutes = require('./routes/staffRoute');
+const subscriptionRoutes = require('./routes/subscriptionRoute');
+const pdfRoute = require('./routes/pdfRoute'); // Ensure pdfRoute is imported
+
+// Use routes
+app.use('/auth', authRoutes); 
+app.use('/dashboard', dashboardRoutes);
+app.use('/supplier', supplierRoutes);
+app.use('/invoice', invoiceRoutes);
+app.use('/sales', salesRoutes);
+app.use('/category-report', categoryReportRoutes);
+app.use('/product-report', productReportRoutes);
+app.use('/product', productRoutes);
+app.use('/chart', chartRoutes);
+app.use('/chart-report', chartReportRoutes);
+app.use('/category', categoryRoutes);
+app.use('/customer', customerRoutes);
+app.use('/expense', expenseRoutes);
+app.use('/inventory', inventoryRoutes);
+app.use('/notification', notificationRoutes);
+app.use('/page-access', pageAccessRoutes);
+app.use('/pay', payRoutes);
+app.use('/profile', profileRoutes);
+app.use('/staff', staffRoutes);
+app.use('/subscription', subscriptionRoutes);
+app.use('/pdf', pdfRoute);
 
 // Example Routes for Authentication
 app.post('/login', (req, res) => {

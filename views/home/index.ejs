@@ -70,10 +70,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
       </nav><!-- End Nav Menu -->
 
-      <a class="btn-getstarted" href="/login">Login</a>
+      <a class="btn-getstarted" href="<%= loginLink %>">Login</a>
 
-
-    </div>
   </header><!-- End Header -->
 
   <main id="main">
@@ -90,10 +88,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <p data-aos="fade-up" data-aos-delay="200">Inventory Management & Sales Analytics</p>
           </div>
           <div class="col-lg-5">
-            <form action="/signup" class="sign-up-form d-flex" data-aos="fade-up" data-aos-delay="300">
+            <form action="/signup" class="sign-up-form d-flex" data-aos="fade-up" data-aos-delay="300" method="POST">
               <span class="form-control">Sign up and Activate Free Trial</span>
               <input type="submit" class="btn btn-primary" value="Sign up">
-          </form>
+            </form>            
           
           </div>
         </div>
