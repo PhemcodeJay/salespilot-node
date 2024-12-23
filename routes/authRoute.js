@@ -1,17 +1,20 @@
 const express = require('express');
 const router = express.Router();
-const authController = require('../controllers/authcontroller');
+const authcontroller = require('../controllers/authcontroller');
 
 // Signup route
-router.post('/signup', authController.signup);
+router.post('/signup', authcontroller.signup);
+
+// Activate account route
+router.post('/activate', authcontroller.activateAccount);
 
 // Login route
-router.post('/login', authController.login);
-
-// Logout route
-router.post('/logout', authController.logout);
+router.post('/login', authcontroller.login);
 
 // Feedback route
-router.post('/feedback', authController.sendFeedback);
+router.post('/feedback', authcontroller.sendFeedback);
+
+// Subscription route
+router.post('/subscription', authcontroller.manageSubscription);
 
 module.exports = router;

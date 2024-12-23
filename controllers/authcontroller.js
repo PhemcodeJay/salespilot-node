@@ -4,13 +4,13 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const { validationResult } = require('express-validator');
 
-// Models (assumed available as per your draft)
+// Import Models
+const auth = require('../models/user'); // Assuming you have a User model
 const ActivationCode = require('../models/activation-code');
 const PasswordReset = require('../models/passwordreset');
-const User = require('../models/user');
 const Subscription = require('../models/subscriptions');
 
-// Database connection pool
+// Database Connection
 const mysql = require('mysql2/promise');
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
@@ -22,28 +22,30 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
-// Nodemailer setup
+// Nodemailer Setup
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // Replace with your email provider
+    service: 'ionos', // Update with your email provider
     auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
+        pass: process.env.EMAIL_PASS,
+    },
 });
 
-// Function to send an email
-const sendEmail = async (email, subject, text) => {
+// Utility Function: Send Email
+const sendEmail = async (to, subject, text) => {
     await transporter.sendMail({
         from: process.env.EMAIL_USER,
-        to: email,
+        to,
         subject,
-        text
+        text,
     });
 };
 
-// Controller
+// Auth Controller
 module.exports = {
-    // Signup
+    /**
+     * User Signup
+     */
     signup: async (req, res) => {
         const { email, password } = req.body;
 
@@ -52,42 +54,49 @@ module.exports = {
         }
 
         try {
-            const existingUser = await User.getUserByEmail(email);
-            if (existingUser) {
-                return res.status(400).json({ message: 'Email is already in use.' });
+            // Check if user exists
+            const [existingUser] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+            if (existingUser.length > 0) {
+                return res.status(400).json({ message: 'Email already in use.' });
             }
 
+            // Hash password and create user
             const hashedPassword = await bcrypt.hash(password, 10);
-            const newUser = await User.createUser({ email, password: hashedPassword });
+            const [newUser] = await pool.query('INSERT INTO users (email, password) VALUES (?, ?)', [email, hashedPassword]);
 
+            // Create activation code
             const activationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-            const expiresAt = new Date(Date.now() + 86400 * 1000); // 24 hours
+            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-            await ActivationCode.createActivationCode({
-                user_id: newUser.id,
-                activation_code: activationCode,
-                expires_at: expiresAt
-            });
+            await pool.query('INSERT INTO activation_codes (user_id, activation_code, expires_at) VALUES (?, ?, ?)', [
+                newUser.insertId,
+                activationCode,
+                expiresAt,
+            ]);
 
+            // Add trial subscription
             const trialExpiry = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days trial
-            await Subscription.createSubscription({
-                user_id: newUser.id,
-                type: 'trial',
-                expires_at: trialExpiry
-            });
+            await pool.query('INSERT INTO subscriptions (user_id, type, expires_at) VALUES (?, ?, ?)', [
+                newUser.insertId,
+                'trial',
+                trialExpiry,
+            ]);
 
-            const emailText = `Activate your account with the code: ${activationCode}`;
-            await sendEmail(email, 'Account Activation', emailText);
+            // Send activation email
+            const emailText = `Welcome! Activate your account using this code: ${activationCode}`;
+            await sendEmail(email, 'Activate Your Account', emailText);
 
             res.status(201).json({
-                message: 'Signup successful. Check your email for the activation code.'
+                message: 'Signup successful! Please check your email for the activation code.',
             });
         } catch (error) {
             res.status(500).json({ message: 'Server error.', error: error.message });
         }
     },
 
-    // Activate account
+    /**
+     * Activate User Account
+     */
     activateAccount: async (req, res) => {
         const { activationCode } = req.body;
 
@@ -96,34 +105,35 @@ module.exports = {
         }
 
         try {
-            const codeRecord = await ActivationCode.getActivationCodeByCode(activationCode);
+            const [codeRecord] = await pool.query('SELECT * FROM activation_codes WHERE activation_code = ?', [activationCode]);
 
-            if (!codeRecord) {
+            if (codeRecord.length === 0) {
                 return res.status(400).json({ message: 'Invalid or expired activation code.' });
             }
 
-            const currentTime = new Date();
-            if (new Date(codeRecord.expires_at) < currentTime) {
+            if (new Date(codeRecord[0].expires_at) < new Date()) {
                 return res.status(400).json({ message: 'Activation code has expired.' });
             }
 
-            const user = await User.getUserById(codeRecord.user_id);
-            if (!user) {
-                return res.status(400).json({ message: 'User not found.' });
+            const [user] = await pool.query('SELECT * FROM users WHERE id = ?', [codeRecord[0].user_id]);
+            if (user.length === 0) {
+                return res.status(404).json({ message: 'User not found.' });
             }
 
-            user.is_active = true;
-            await user.save(); // Update user status to active
+            const updatedUser = await pool.query('UPDATE users SET is_active = true WHERE id = ?', [user[0].id]);
 
-            await ActivationCode.deleteActivationCode(codeRecord.id); // Clean up used code
+            // Delete used activation code
+            await pool.query('DELETE FROM activation_codes WHERE id = ?', [codeRecord[0].id]);
 
-            res.json({ message: 'Account activated successfully.' });
+            res.status(200).json({ message: 'Account activated successfully!' });
         } catch (error) {
             res.status(500).json({ message: 'Server error.', error: error.message });
         }
     },
 
-    // Login
+    /**
+     * User Login
+     */
     login: async (req, res) => {
         const { email, password } = req.body;
 
@@ -132,38 +142,36 @@ module.exports = {
         }
 
         try {
-            const user = await User.getUserByEmail(email);
-            if (!user) {
+            const [user] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+            if (user.length === 0 || !(await bcrypt.compare(password, user[0].password))) {
                 return res.status(401).json({ message: 'Invalid email or password.' });
             }
 
-            const isMatch = await bcrypt.compare(password, user.password);
-            if (!isMatch) {
-                return res.status(401).json({ message: 'Invalid email or password.' });
-            }
-
-            if (!user.is_active) {
+            if (!user[0].is_active) {
                 return res.status(403).json({ message: 'Account is not activated.' });
             }
 
-            const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-            res.json({ message: 'Login successful.', token });
+            const token = jwt.sign({ id: user[0].id, email: user[0].email }, process.env.JWT_SECRET, {
+                expiresIn: '1h',
+            });
+
+            res.status(200).json({ message: 'Login successful!', token });
         } catch (error) {
             res.status(500).json({ message: 'Server error.', error: error.message });
         }
     },
 
-    // Logout
+    /**
+     * Logout
+     */
     logout: (req, res) => {
-        try {
-            // Client-side token removal
-            res.json({ message: 'Logout successful.' });
-        } catch (error) {
-            res.status(500).json({ message: 'Server error during logout.', error: error.message });
-        }
+        // Token removal logic should be handled client-side
+        res.status(200).json({ message: 'Logout successful.' });
     },
 
-    // Send Feedback Email
+    /**
+     * Send Feedback
+     */
     sendFeedback: async (req, res) => {
         const { email, feedback } = req.body;
 
@@ -172,15 +180,16 @@ module.exports = {
         }
 
         try {
-            const feedbackSubject = `Feedback from ${email}`;
-            await sendEmail(process.env.FEEDBACK_EMAIL, feedbackSubject, feedback);
-            res.json({ message: 'Feedback submitted successfully.' });
+            await sendEmail(process.env.FEEDBACK_EMAIL, `Feedback from ${email}`, feedback);
+            res.status(200).json({ message: 'Feedback sent successfully!' });
         } catch (error) {
             res.status(500).json({ message: 'Failed to send feedback.', error: error.message });
         }
     },
 
-    // Manage Subscriptions (example for updating subscription)
+    /**
+     * Manage Subscriptions
+     */
     manageSubscription: async (req, res) => {
         const { userId, subscriptionType } = req.body;
 
@@ -189,28 +198,34 @@ module.exports = {
         }
 
         try {
-            const user = await User.getUserById(userId);
-            if (!user) {
+            const [user] = await pool.query('SELECT * FROM users WHERE id = ?', [userId]);
+            if (user.length === 0) {
                 return res.status(404).json({ message: 'User not found.' });
             }
 
-            const subscription = await Subscription.getSubscriptionByUserId(userId);
-            if (subscription) {
-                subscription.type = subscriptionType;
-                subscription.expires_at = new Date(Date.now() + (subscriptionType === 'trial' ? 90 * 24 * 60 * 60 * 1000 : 365 * 24 * 60 * 60 * 1000)); // Example expiry logic
-                await subscription.save(); // Update subscription
+            let [subscription] = await pool.query('SELECT * FROM subscriptions WHERE user_id = ?', [userId]);
+
+            const newExpiry = new Date(
+                Date.now() + (subscriptionType === 'trial' ? 90 : 365) * 24 * 60 * 60 * 1000
+            );
+
+            if (subscription.length > 0) {
+                await pool.query('UPDATE subscriptions SET type = ?, expires_at = ? WHERE user_id = ?', [
+                    subscriptionType,
+                    newExpiry,
+                    userId,
+                ]);
             } else {
-                // Create new subscription if none exists
-                await Subscription.createSubscription({
-                    user_id: userId,
-                    type: subscriptionType,
-                    expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // Default to 1-year subscription
-                });
+                await pool.query('INSERT INTO subscriptions (user_id, type, expires_at) VALUES (?, ?, ?)', [
+                    userId,
+                    subscriptionType,
+                    newExpiry,
+                ]);
             }
 
-            res.json({ message: 'Subscription updated successfully.' });
+            res.status(200).json({ message: 'Subscription updated successfully!' });
         } catch (error) {
             res.status(500).json({ message: 'Server error.', error: error.message });
         }
-    }
+    },
 };

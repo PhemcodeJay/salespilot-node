@@ -99,4 +99,4 @@ class Contact {
   }
 }
 
-module.exports = Contact;
+module.exports = authController;

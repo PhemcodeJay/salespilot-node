@@ -109,4 +109,5 @@ class PasswordReset {
   }
 }
 
+// Export the PasswordReset class
 module.exports = PasswordReset;
