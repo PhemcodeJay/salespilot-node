@@ -120,7 +120,7 @@ module.exports = {
                 return res.status(404).json({ message: 'User not found.' });
             }
 
-            const updatedUser = await pool.query('UPDATE users SET is_active = true WHERE id = ?', [user[0].id]);
+            await pool.query('UPDATE users SET is_active = true WHERE id = ?', [user[0].id]);
 
             // Delete used activation code
             await pool.query('DELETE FROM activation_codes WHERE id = ?', [codeRecord[0].id]);
@@ -159,14 +159,6 @@ module.exports = {
         } catch (error) {
             res.status(500).json({ message: 'Server error.', error: error.message });
         }
-    },
-
-    /**
-     * Logout
-     */
-    logout: (req, res) => {
-        // Token removal logic should be handled client-side
-        res.status(200).json({ message: 'Logout successful.' });
     },
 
     /**
@@ -228,5 +220,15 @@ module.exports = {
             res.status(500).json({ message: 'Server error.', error: error.message });
         }
     },
-};
 
+    /**
+     * User Logout
+     */
+    logout: async (req, res) => {
+        // Invalidate the token on the client side by instructing the client to remove it
+        // Since JWT is stateless and stored on the client-side, we cannot "delete" a token from the server
+        // But we can advise the client to delete it from the local storage/cookie.
+
+        res.status(200).json({ message: 'Logged out successfully!' });
+    }
+};

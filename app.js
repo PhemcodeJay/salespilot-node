@@ -96,7 +96,7 @@ app.get('/reset-password', (req, res) => {
     });
 });
 
-// Define the route for login (Only once)
+// Define the route for login
 app.get('/auth/login', (req, res) => {
     res.render('auth/login');  // Render the login.ejs file
 });
@@ -116,6 +116,76 @@ app.get('/activate', (req, res) => {
         errorMessage: errorMessage,
         activationToken: activationToken
     });
+});
+
+// Example Route for Login Handling
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+    let username_err = '';
+    let password_err = '';
+
+    // Validate the username and password inputs
+    if (!username) {
+        username_err = "Username is required";
+    }
+    if (!password) {
+        password_err = "Password is required";
+    }
+
+    // If there are errors, return to login page with error messages
+    if (username_err || password_err) {
+        return res.render('auth/login', {
+            username_err,
+            password_err,
+            username,
+            login_err: "Please fix the errors and try again"
+        });
+    }
+
+    // Perform login validation (dummy example)
+    if (username === "user" && password === "password") {
+        // Redirect to dashboard if login is successful
+        res.redirect('/dashboard');
+    } else {
+        // Pass the error message if login fails
+        res.render('auth/login', {
+            login_err: "Invalid username or password",
+            username
+        });
+    }
+});
+
+// Example route to handle logout
+app.post('/logout', (req, res) => {
+    // Clear the session or token
+    res.clearCookie('token'); // Clear the token cookie (if stored in cookies)
+    // Redirect to the login page
+    res.redirect('/auth/login');
+});
+
+// PayPal Payment Example
+app.post('/create-payment', verifyToken, async (req, res) => {
+    const order = {
+        intent: 'CAPTURE',
+        purchase_units: [
+            { amount: { value: req.body.amount } },
+        ],
+        application_context: {
+            return_url: 'http://localhost:5000/payment-success',
+            cancel_url: 'http://localhost:5000/payment-cancel',
+        },
+    };
+
+    const request = new paypalClient.orders.OrdersCreateRequest();
+    request.requestBody(order);
+
+    try {
+        const orderResponse = await paypalClient.execute(request);
+        res.json({ orderId: orderResponse.result.id });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Payment creation failed' });
+    }
 });
 
 // Import routes
@@ -163,50 +233,6 @@ app.use('/profile', profileRoutes);
 app.use('/staff', staffRoutes);
 app.use('/subscription', subscriptionRoutes);
 app.use('/pdf', pdfRoute);
-
-// Example Routes for Authentication
-app.post('/login', (req, res) => {
-    const { email, password } = req.body;
-    const user = { id: 1, email }; // Replace with your user validation logic
-
-    if (email === 'user@example.com' && password === 'password123') {
-        const token = generateToken(user); // Generate JWT
-        return res.json({ token });
-    }
-    res.status(401).json({ error: 'Invalid credentials.' });
-});
-
-app.get('/profile', verifyToken, (req, res) => {
-    res.json({ user: req.user });
-});
-
-// PayPal Payment Example
-app.post('/create-payment', verifyToken, async (req, res) => {
-    const order = {
-        intent: 'CAPTURE',
-        purchase_units: [
-            { amount: { value: req.body.amount } },
-        ],
-        application_context: {
-            return_url: 'http://localhost:5000/payment-success',
-            cancel_url: 'http://localhost:5000/payment-cancel',
-        },
-    };
-
-    const request = new paypalClient.orders.OrdersCreateRequest();
-    request.requestBody(order);
-
-    try {
-        const orderResponse = await paypalClient.execute(request);
-        res.json({ orderId: orderResponse.result.id });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Payment creation failed' });
-    }
-});
-
-// Cron Jobs
-require('./cron/subscriptioncron');
 
 // Default Route for Undefined Paths
 app.use((req, res) => {
