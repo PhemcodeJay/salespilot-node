@@ -32,52 +32,67 @@ router.get('/recoverpwd', (req, res) => {
 // Signup Route
 router.post('/signup', async (req, res) => {
     const errors = validationResult(req);
+    
+    // If there are validation errors, return them
     if (!errors.isEmpty()) {
         return res.render('auth/signup', {
-            error_message: errors.array().map(err => err.msg).join(', ')  // Pass error_message to the view
+            error_message: errors.array().map(err => err.msg).join(', '),
+            success: null // Clear any success message if errors occur
         });
     }
 
-    const { username, password, email } = req.body;
+    const { username, password, confirm_password, email } = req.body;
+
+    // Ensure password and confirm password match
+    if (password !== confirm_password) {
+        return res.render('auth/signup', {
+            error_message: 'Passwords do not match.',
+            success: null // Clear any success message if errors occur
+        });
+    }
 
     try {
         // Check if the user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.render('auth/signup', {
-                error_message: 'User already exists. Please use a different email.'  // Use error_message here
+                error_message: 'User already exists. Please use a different email.',
+                success: null // Clear any success message if errors occur
             });
         }
 
-        // Hash the password
+        // Hash the password before saving it
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create the new user
+        // Create a new user
         const newUser = new User({
             username,
             email,
             password: hashedPassword,
-            isActive: false, // Account will be inactive until activated
+            isActive: false, 
         });
 
-        // Save user
+        // Save the new user to the database
         await newUser.save();
 
-        // Send activation email
+        // Send account activation email
         sendAccountActivationEmail(newUser.email, newUser._id);
 
+        // Render the signup page with a success message
         res.render('auth/signup', {
-            error_message: null,  // No error message
-            success: 'User registered successfully. Please check your email to activate your account.'  // Success message
+            error_message: null, // Clear any error message
+            success: 'User registered successfully. Please check your email to activate your account.'
         });
     } catch (error) {
         console.error(error);
         res.render('auth/signup', {
-            error_message: 'Server error. Please try again later.'  // Handle server errors
+            error_message: 'Server error. Please try again later.',
+            success: null // Clear any success message in case of an error
         });
     }
 });
+
 
 
 // Account Activation Route
@@ -152,16 +167,6 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// Handle login route
-router.get('/login', (req, res) => {
-    res.render('auth/login', {
-      login_err: req.flash('login_err'), // Pass the error message
-      username: req.flash('username'),   // Pass the username (if previously entered)
-      username_err: req.flash('username_err'), // Pass the username error (if any)
-      password_err: req.flash('password_err'), // Pass the password error (if any)
-      remember: req.flash('remember') // Remember me option (if selected previously)
-    });
-  });
 
 // Password Reset Request Route
 router.post('/passwordreset', async (req, res) => {
