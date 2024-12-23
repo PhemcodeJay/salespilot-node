@@ -12,6 +12,9 @@ require('dotenv').config();
 require('./config/passport')(passport);
 const flash = require('connect-flash');
 const punycode = require('punycode/');
+const cookieParser = require('cookie-parser');
+
+
 
 
 // Initialize Express App
@@ -43,7 +46,7 @@ app.use(
 );
 app.use(passport.initialize());
 app.use(passport.session());
-
+app.use(cookieParser());
 
 
 // Database Connection

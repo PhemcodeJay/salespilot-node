@@ -131,10 +131,10 @@ router.post('/login', async (req, res) => {
         });
     }
 
-    const { username, password } = req.body;
+    const { username, password, remember } = req.body;
 
     try {
-        const user = await User.findOne({ username });
+        const user = await User.findOne({ username }); // or User.findOne({ email }) if you're using email
         if (!user) {
             return res.render('auth/login', {
                 error: 'Invalid credentials. Please check your username and password.'
@@ -157,6 +157,13 @@ router.post('/login', async (req, res) => {
         const payload = { userId: user._id };
         const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
+        // If remember me is checked, store a longer expiration cookie
+        if (remember) {
+            res.cookie('remember', true, { maxAge: 30 * 24 * 60 * 60 * 1000 }); // 30 days
+        } else {
+            res.cookie('remember', false);
+        }
+
         res.redirect('/dashboard');
     } catch (error) {
         console.error(error);
@@ -165,6 +172,7 @@ router.post('/login', async (req, res) => {
         });
     }
 });
+
 
 // Password Reset Request Route
 router.post('/passwordreset', async (req, res) => {
