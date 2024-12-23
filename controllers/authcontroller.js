@@ -1,243 +1,241 @@
-require('dotenv').config(); // Load environment variables
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const { validationResult } = require('express-validator');
+const User = require('../models/user'); // Assuming you have a User model
+const { sendPasswordResetEmail, sendAccountActivationEmail } = require('../utils/email'); // Assuming email utils are set up
 
-// Import Models
-const User = require('../models/user');
-const ActivationCode = require('../models/activation-code');
-const PasswordReset = require('../models/passwordreset');
-const Subscription = require('../models/subscriptions');
-const passport = require('passport');
+// Signup Controller
+exports.signup = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
 
-// Assuming the local strategy is used
-exports.loginWithPassport = (req, res, next) => {
-    passport.authenticate('local', {
-        successRedirect: '/dashboard',
-        failureRedirect: '/auth/login',
-        failureFlash: true, // This line enables failure flash messages
-        successFlash: 'Welcome back!' // Optional success message
-    })(req, res, next);
-};
+    const { username, password, email } = req.body;
 
-// Nodemailer Setup
-const transporter = nodemailer.createTransport({
-    service: 'ionos', // Update with your email provider
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
-
-// Utility Function: Send Email
-const sendEmail = async (to, subject, text) => {
     try {
-        await transporter.sendMail({
-            from: process.env.EMAIL_USER,
-            to,
-            subject,
-            text,
+        // Check if the user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ msg: 'User already exists' });
+        }
+
+        // Hash the password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Get current date for trial start
+        const trialStartDate = new Date();
+        // Set trial end date to 3 months from now
+        const trialEndDate = new Date(trialStartDate);
+        trialEndDate.setMonth(trialEndDate.getMonth() + 3);
+
+        // Create the new user with trial period details
+        const newUser = new User({
+            username,
+            email,
+            password: hashedPassword,
+            isActive: false, // Set account as inactive until activation
+            trialStartDate,   // Add trial start date
+            trialEndDate,     // Add trial end date
+            subscriptionType: 'trial',  // Set initial subscription type as 'trial'
         });
+
+        // Save the user to the database
+        await newUser.save();
+
+        // Send activation email
+        sendAccountActivationEmail(newUser.email, newUser._id);
+
+        res.status(201).json({ msg: 'User registered successfully. Please check your email to activate your account.' });
     } catch (error) {
-        throw new Error('Failed to send email');
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
     }
 };
 
-// Auth Controller
-module.exports = {
-    /**
-     * User Signup
-     */
-    signup: async (req, res) => {
-        const { username, password } = req.body;
+// Account Activation Controller
+exports.activateAccount = async (req, res) => {
+    const { activationCode } = req.body;
 
-        if (!username || !password) {
-            return res.status(400).json({ message: 'Username and password are required.' });
+    try {
+        // Find the user by activation code (could be stored in the database or sent as a JWT)
+        const user = await User.findOne({ activationCode });
+
+        if (!user) {
+            return res.status(400).json({ msg: 'Invalid activation code' });
         }
 
-        try {
-            // Check if user exists using the User model
-            const existingUser = await User.findOne({ username });
-            if (existingUser) {
-                return res.status(400).json({ message: 'Username already in use.' });
-            }
+        // Activate the user account
+        user.isActive = true;
+        await user.save();
 
-            // Hash password and create user
-            const hashedPassword = await bcrypt.hash(password, 10);
-            const newUser = await User.create({ username, password: hashedPassword });
+        res.status(200).json({ msg: 'Account activated successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
 
-            // Create activation code using the ActivationCode model
-            const activationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+// Login Controller
+exports.login = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
 
-            await ActivationCode.create({
-                userId: newUser.id,
-                activationCode,
-                expiresAt,
-            });
+    const { username, password } = req.body;
 
-            // Add trial subscription using the Subscription model
-            const trialExpiry = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days trial
-            await Subscription.create({
-                userId: newUser.id,
-                type: 'trial',
-                expiresAt: trialExpiry,
-            });
-
-            // Send activation email
-            const emailText = `Welcome! Activate your account using this code: ${activationCode}`;
-            await sendEmail(newUser.username, 'Activate Your Account', emailText);
-
-            res.status(201).json({
-                message: 'Signup successful! Please check your email for the activation code.',
-            });
-        } catch (error) {
-            res.status(500).json({ message: 'Server error.', error: error.message });
-        }
-    },
-
-    /**
-     * Activate User Account
-     */
-    activateAccount: async (req, res) => {
-        const { activationCode } = req.body;
-
-        if (!activationCode) {
-            return res.status(400).json({ message: 'Activation code is required.' });
+    try {
+        // Find user by username
+        const user = await User.findOne({ username });
+        if (!user) {
+            return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
-        try {
-            // Find the activation code using the ActivationCode model
-            const codeRecord = await ActivationCode.findOne({ activationCode });
-
-            if (!codeRecord) {
-                return res.status(400).json({ message: 'Invalid or expired activation code.' });
-            }
-
-            if (new Date(codeRecord.expiresAt) < new Date()) {
-                return res.status(400).json({ message: 'Activation code has expired.' });
-            }
-
-            // Find the user
-            const user = await User.findById(codeRecord.userId);
-            if (!user) {
-                return res.status(404).json({ message: 'User not found.' });
-            }
-
-            // Activate the user account
-            await User.updateOne({ id: user.id }, { isActive: true });
-
-            // Delete used activation code
-            await ActivationCode.deleteOne({ id: codeRecord.id });
-
-            res.status(200).json({ message: 'Account activated successfully!' });
-        } catch (error) {
-            res.status(500).json({ message: 'Server error.', error: error.message });
-        }
-    },
-
-    /**
-     * User Login
-     */
-    login: async (req, res) => {
-        const { username, password } = req.body;
-        let password_err = '';
-
-        if (!username || !password) {
-            password_err = 'Username and password are required.';
-            return res.render('auth/login', { password_err, username: username || '' });
+        // Check if account is active
+        if (!user.isActive) {
+            return res.status(400).json({ msg: 'Account is not activated. Please check your email' });
         }
 
-        try {
-            const user = await User.findOne({ username });
-            if (!user || !(await bcrypt.compare(password, user.password))) {
-                password_err = 'Invalid username or password.';
-                return res.render('auth/login', { password_err, username });
-            }
-
-            if (!user.isActive) {
-                password_err = 'Account is not activated.';
-                return res.render('auth/login', { password_err, username });
-            }
-
-            const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, {
-                expiresIn: '1h',
-            });
-
-            // Store the token in a cookie or session if necessary for client-side authentication
-            res.cookie('auth_token', token, { httpOnly: true, maxAge: 3600000 }); // Example of setting a cookie
-
-            res.redirect('/dashboard'); // Redirect to the dashboard or another page after successful login
-        } catch (error) {
-            password_err = 'Server error occurred. Please try again.';
-            return res.render('auth/login', { password_err, username: username || '' });
-        }
-    },
-
-    /**
-     * Send Feedback
-     */
-    sendFeedback: async (req, res) => {
-        const { username, feedback } = req.body;
-
-        if (!username || !feedback) {
-            return res.status(400).json({ message: 'Username and feedback are required.' });
+        // Check if trial has expired
+        const currentDate = new Date();
+        if (user.trialEndDate && currentDate > new Date(user.trialEndDate)) {
+            user.subscriptionType = 'expired';
+            await user.save();
+            return res.status(400).json({ msg: 'Your trial period has expired. Please subscribe to continue using the service.' });
         }
 
-        try {
-            await sendEmail(process.env.FEEDBACK_EMAIL, `Feedback from ${username}`, feedback);
-            res.status(200).json({ message: 'Feedback sent successfully!' });
-        } catch (error) {
-            res.status(500).json({ message: 'Failed to send feedback.', error: error.message });
-        }
-    },
-
-    /**
-     * Manage Subscriptions
-     */
-    manageSubscription: async (req, res) => {
-        const { userId, subscriptionType } = req.body;
-
-        if (!userId || !subscriptionType) {
-            return res.status(400).json({ message: 'User ID and subscription type are required.' });
+        // Compare password with hashed password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
-        try {
-            const user = await User.findById(userId);
-            if (!user) {
-                return res.status(404).json({ message: 'User not found.' });
-            }
+        // Create JWT token
+        const payload = { userId: user._id };
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-            let subscription = await Subscription.findOne({ userId });
+        res.json({ token });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
 
-            const newExpiry = new Date(
-                Date.now() + (subscriptionType === 'trial' ? 90 : 365) * 24 * 60 * 60 * 1000
-            );
+// Send Feedback Controller
+exports.sendFeedback = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
 
-            if (subscription) {
-                subscription.type = subscriptionType;
-                subscription.expiresAt = newExpiry;
-                await subscription.save();
-            } else {
-                await Subscription.create({
-                    userId,
-                    type: subscriptionType,
-                    expiresAt: newExpiry,
-                });
-            }
+    const { username, feedback } = req.body;
 
-            res.status(200).json({ message: 'Subscription updated successfully!' });
-        } catch (error) {
-            res.status(500).json({ message: 'Server error.', error: error.message });
+    // Save feedback in database (assuming you have a Feedback model)
+    // await Feedback.create({ username, feedback });
+
+    res.status(200).json({ msg: 'Feedback received successfully' });
+};
+
+// Manage Subscription Controller
+exports.manageSubscription = async (req, res) => {
+    const { userId, subscriptionType } = req.body;
+
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(400).json({ msg: 'User not found' });
         }
-    },
 
-    /**
-     * User Logout
-     */
-    logout: async (req, res) => {
-        // Invalidate the token on the client side by instructing the client to remove it
-        res.status(200).json({ message: 'Logged out successfully!' });
+        // Handle subscription type update (e.g., upgrade or downgrade)
+        user.subscriptionType = subscriptionType;
+        if (subscriptionType !== 'trial') {
+            user.trialEndDate = null; // Remove trial period if the user subscribes
+        }
+        await user.save();
+
+        res.status(200).json({ msg: 'Subscription updated successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+// Logout Controller
+exports.logout = (req, res) => {
+    // Invalidate the token or remove it from the frontend
+    res.status(200).json({ msg: 'Logged out successfully' });
+};
+
+// Password Reset Request Controller
+exports.passwordResetRequest = async (req, res) => {
+    const { user_id } = req.body;
+
+    try {
+        // Find the user by ID
+        const user = await User.findById(user_id);
+        if (!user) {
+            return res.status(400).json({ msg: 'User not found' });
+        }
+
+        // Generate a reset token
+        const resetToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        // Send password reset email with the reset token
+        sendPasswordResetEmail(user.email, resetToken);
+
+        res.status(200).json({ msg: 'Password reset email sent successfully' });
+    } catch (error)        {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
+    }
+};
+
+// Validate Password Reset Code Controller
+exports.validatePasswordReset = async (req, res) => {
+    const { reset_code } = req.body;
+
+    try {
+        // Verify the reset code
+        jwt.verify(reset_code, process.env.JWT_SECRET);
+
+        res.status(200).json({ msg: 'Reset code is valid' });
+    } catch (error) {
+        console.error(error);
+        res.status(400).json({ msg: 'Invalid or expired reset code' });
+    }
+};
+
+// Reset Password Controller
+exports.resetPassword = async (req, res) => {
+    const { user_id, reset_code, new_password } = req.body;
+
+    try {
+        // Verify the reset code
+        const decoded = jwt.verify(reset_code, process.env.JWT_SECRET);
+
+        if (decoded.userId !== user_id) {
+            return res.status(400).json({ msg: 'Invalid reset request' });
+        }
+
+        // Find the user by ID
+        const user = await User.findById(user_id);
+        if (!user) {
+            return res.status(400).json({ msg: 'User not found' });
+        }
+
+        // Hash the new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(new_password, salt);
+
+        // Update the user's password
+        user.password = hashedPassword;
+        await user.save();
+
+        res.status(200).json({ msg: 'Password updated successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
     }
 };

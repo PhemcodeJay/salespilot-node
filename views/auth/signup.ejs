@@ -118,40 +118,13 @@
         if (!password) document.getElementById('password-error').textContent = 'Password is required.';
         if (!confirmPassword) document.getElementById('confirm-password-error').textContent = 'Please confirm your password.';
         if (!email) document.getElementById('email-error').textContent = 'Email is required.';
-        if (!termsAccepted) {
-          document.getElementById('error-message').textContent = 'You must agree to the terms and conditions.';
-          document.getElementById('error-message').style.display = 'block';
-        }
+        if (!termsAccepted) document.getElementById('error-message').style.display = 'block';
         return;
       }
 
-      if (password !== confirmPassword) {
-        document.getElementById('confirm-password-error').textContent = 'Passwords do not match.';
-        return;
-      }
-
-      try {
-        const response = await fetch('/auth/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password, email }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          // Redirect to login page on successful signup
-          window.location.href = '/login';
-        } else {
-          document.getElementById('error-message').textContent = data.error || 'An error occurred. Please try again.';
-          document.getElementById('error-message').style.display = 'block';
-        }
-      } catch (error) {
-        document.getElementById('error-message').textContent = 'An error occurred. Please try again.';
-        document.getElementById('error-message').style.display = 'block';
-      }
+      // Submit the form if everything is valid
+      this.submit();
     });
   </script>
-  
 </body>
 </html>

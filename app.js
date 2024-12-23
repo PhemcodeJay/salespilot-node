@@ -10,9 +10,17 @@ const openai = require('openai');
 const paypalClient = require('./config/paypalconfig');
 require('dotenv').config();
 require('./config/passport')(passport);
+const flash = require('connect-flash');
 
 // Initialize Express App
 const app = express();
+
+app.use(session({
+    secret: 'your-secret-key',
+    resave: false,
+    saveUninitialized: true
+}));
+app.use(flash());
 
 // Set View Engine
 app.set('view engine', 'ejs');
@@ -54,41 +62,15 @@ db.connect((err) => {
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 app.use('/home_assets', express.static(path.join(__dirname, 'public', 'home_assets')));
 
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views')); // Ensure the 'views' folder path is correct
+
+
 // Routes to Serve Views
 app.get('/', (req, res) => {
     res.render('home/index', { title: 'Home' });
 });
 
-app.get('/signup', (req, res) => {
-    res.render('auth/signup', { title: 'Sign Up' });
-});
-
-app.get('/login', (req, res) => {
-    res.render('auth/login', { title: 'Login' });
-});
-
-// Example Authentication Post Routes
-app.post('/signup', (req, res) => {
-    const { email, password } = req.body;
-    // Simulate user creation
-    res.json({ message: 'User signed up successfully!', email });
-});
-
-app.post('/login', (req, res) => {
-    const { email, password } = req.body;
-    const user = { id: 1, email };
-
-    if (email === 'user@example.com' && password === 'password123') {
-        const token = generateToken(user);
-        res.json({ token });
-    } else {
-        res.status(401).json({ message: 'Invalid credentials' });
-    }
-});
-
-app.get('/profile', verifyToken, (req, res) => {
-    res.json({ user: req.user });
-});
 
 // PayPal Payment Example
 app.post('/create-payment', verifyToken, async (req, res) => {

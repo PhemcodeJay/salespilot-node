@@ -1,94 +1,216 @@
 const express = require('express');
 const router = express.Router();
-const authController = require('../controllers/authcontroller');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { validationResult } = require('express-validator');
+const User = require('../models/user');
+const { sendPasswordResetEmail, sendAccountActivationEmail } = require('../utils/email');
 
-// Signup route (POST for handling signup)
-router.post('/auth/signup', async (req, res) => {
+// Load Views
+router.get('/login', (req, res) => {
+    res.render('auth/login');
+});
+
+router.get('/signup', (req, res) => {
+    res.render('auth/signup');
+});
+
+router.get('/activate', (req, res) => {
+    res.render('auth/activate');
+});
+
+router.get('/passwordreset', (req, res) => {
+    res.render('auth/passwordreset');
+});
+
+router.get('/recoverpwd', (req, res) => {
+    res.render('auth/recoverpwd');
+});
+
+// Signup Route
+router.post('/signup', async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { username, password, email } = req.body;
+
     try {
-        // Extract form data
-        const { username, password, confirm_password, email, terms } = req.body;
-
-        // Validation checks
-        const errorMessages = {};
-
-        if (!username) errorMessages.username_error = 'Username is required.';
-        if (!password) errorMessages.password_error = 'Password is required.';
-        if (password !== confirm_password) errorMessages.confirm_password_error = 'Passwords do not match.';
-        if (!email) errorMessages.email_error = 'Email is required.';
-        if (!terms) errorMessages.terms_error = 'You must agree to the terms and conditions.';
-
-        if (Object.keys(errorMessages).length > 0) {
-            return res.status(400).json({ error: 'Validation failed', errorMessages });
+        // Check if the user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ msg: 'User already exists' });
         }
 
-        // If validation passes, attempt to create user account
-        const result = await authController.signup(req, res);
-        res.status(200).json({ message: 'Account created successfully', data: result });
+        // Hash the password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Create the new user
+        const newUser = new User({
+            username,
+            email,
+            password: hashedPassword,
+            isActive: false, // Account will be inactive until activated
+        });
+
+        // Save user
+        await newUser.save();
+
+        // Send activation email
+        sendAccountActivationEmail(newUser.email, newUser._id);
+
+        res.status(201).json({ msg: 'User registered successfully. Please check your email to activate your account.' });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ msg: 'Server error' });
     }
 });
 
-// Render Signup page route (GET for showing signup form)
-router.get('/auth/signup', (req, res) => {
-    res.render('auth/signup', {
-        error_message: req.flash('signup_err') || '', // Display any error message from flash
-        username: req.flash('username') || '',        // Pre-fill username if there's a previous error
-        username_error: req.flash('username_err') || '', // Display any error related to username
-        password_error: req.flash('password_err') || '', // Display any error related to password
-        confirm_password_error: req.flash('confirm_password_err') || '', // Display confirm password error
-        email_error: req.flash('email_err') || '', // Display email error
-        terms_error: req.flash('terms_err') || ''  // Display terms error
-    });
-});
+// Account Activation Route
+router.post('/activate', async (req, res) => {
+    const { activationCode } = req.body;
 
-// Activate account route
-router.post('/auth/activate', authController.activateAccount);
-
-// Login route (POST for handling login submission)
-router.post('/auth/login', async (req, res) => {
     try {
-        await authController.login(req, res); // Call the login method from controller
+        const user = await User.findOne({ activationCode });
+        if (!user) {
+            return res.status(400).json({ msg: 'Invalid activation code' });
+        }
+
+        // Activate user account
+        user.isActive = true;
+        await user.save();
+
+        res.status(200).json({ msg: 'Account activated successfully' });
     } catch (error) {
-        req.flash('login_err', 'Invalid username or password');
-        res.redirect('/auth/login');
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
     }
 });
 
-// Render Login page route (GET for showing login form)
-router.get('/auth/login', (req, res) => {
-    res.render('auth/login', {
-        login_err: req.flash('login_err') || '',  // Default to an empty string if not set
-        username: req.flash('username') || '',    // Similarly for username
-        username_err: req.flash('username_err') || '' // Similarly for username_err
-    });
+// Login Route
+router.post('/login', async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { username, password } = req.body;
+
+    try {
+        const user = await User.findOne({ username });
+        if (!user) {
+            return res.status(400).json({ msg: 'Invalid credentials' });
+        }
+
+        if (!user.isActive) {
+            return res.status(400).json({ msg: 'Account is not activated. Please check your email' });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ msg: 'Invalid credentials' });
+        }
+
+        const payload = { userId: user._id };
+        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        res.json({ token });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
+    }
 });
 
-// Feedback route (POST for sending feedback)
-router.post('/auth/feedback', authController.sendFeedback);
+// Password Reset Request Route
+router.post('/passwordreset', async (req, res) => {
+    const { email } = req.body;
 
-// Render Feedback page route (GET for rendering feedback form)
-router.get('/auth/feedback', (req, res) => {
-    res.render('auth/feedback', {
-        feedback_err: req.flash('feedback_err') || ''  // Default to an empty string if not set
-    });
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ msg: 'User not found' });
+        }
+
+        const resetToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+        sendPasswordResetEmail(user.email, resetToken);
+
+        res.status(200).json({ msg: 'Password reset email sent successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
+    }
 });
 
-// Subscription route (POST for managing subscription)
-router.post('/auth/subscription', authController.manageSubscription);
+// Validate Password Reset Code Route
+router.post('/validatepasswordreset', async (req, res) => {
+    const { reset_code } = req.body;
 
-// Render Subscription page route (GET for showing subscription form)
-router.get('/auth/subscription', (req, res) => {
-    res.render('auth/subscription', {
-        subscription_err: req.flash('subscription_err') || ''  // Default to an empty string if not set
-    });
+    try {
+        jwt.verify(reset_code, process.env.JWT_SECRET);
+        res.status(200).json({ msg: 'Reset code is valid' });
+    } catch (error) {
+        console.error(error);
+        res.status(400).json({ msg: 'Invalid or expired reset code' });
+    }
 });
 
-// Logout route (GET to log out user)
-router.get('/auth/logout', (req, res) => {
-    res.clearCookie('jwt');  // If you store JWT in cookies
-    res.redirect('/auth/login');
+// Reset Password Route
+router.post('/resetpassword', async (req, res) => {
+    const { user_id, reset_code, new_password } = req.body;
+
+    try {
+        const decoded = jwt.verify(reset_code, process.env.JWT_SECRET);
+        if (decoded.userId !== user_id) {
+            return res.status(400).json({ msg: 'Invalid reset request' });
+        }
+
+        const user = await User.findById(user_id);
+        if (!user) {
+            return res.status(400).json({ msg: 'User not found' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(new_password, salt);
+
+        user.password = hashedPassword;
+        await user.save();
+
+        res.status(200).json({ msg: 'Password updated successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error' });
+    }
 });
 
+
+// Feedback Route
+router.get('/feedback', (req, res) => {
+    res.render('auth/feedback');  // Render the feedback.ejs form
+});
+
+router.post('/submit-feedback', async (req, res) => {
+    const { rating, comments } = req.body;
+
+    try {
+        // Save feedback to the database or perform any other action you want
+        const feedback = new Feedback({
+            rating,
+            comments,
+            submittedAt: new Date()
+        });
+
+        await feedback.save();  // Assuming you have a Feedback model set up
+
+        res.status(200).json({ msg: 'Thank you for your feedback!' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Error submitting feedback, please try again later.' });
+    }
+});
+
+// Export the router
 module.exports = router;
+

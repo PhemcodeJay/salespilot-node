@@ -1,7 +1,8 @@
 const User = require('../models/user');  // Adjust the path as needed
+const moment = require('moment'); // Importing moment.js to handle date manipulation
 
 class UserController {
-  // Create a new user
+  // Create a new user with a 3-month free trial
   static async create(req, res) {
     const { username, email, password, phone, role } = req.body;
 
@@ -9,9 +10,19 @@ class UserController {
       return res.status(400).json({ error: 'All fields are required: username, email, password, phone, role' });
     }
 
+    // Calculate 3 months from the current date
+    const trialEndDate = moment().add(3, 'months').format('YYYY-MM-DD');
+
     try {
-      const result = await User.create({ username, email, password, phone, role });
-      res.status(201).json({ message: 'User created successfully.', data: result });
+      const result = await User.create({ 
+        username, 
+        email, 
+        password, 
+        phone, 
+        role, 
+        trial_end_date: trialEndDate  // Adding the trial end date
+      });
+      res.status(201).json({ message: 'User created successfully with a 3-month free trial.', data: result });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
