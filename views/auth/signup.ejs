@@ -32,7 +32,7 @@
                     <div class="p-3">
                       <h2 class="mb-2">Sign Up</h2>
                       <p>Create your SalesPilot account.</p>
-                      <form action="/signup" method="POST">
+                      <form action="auth/signup" method="POST">
                         <div class="input-group input-group-outline mb-3">
                             <input type="text" id="username" name="username" class="form-control" placeholder="Enter your username" required value="<%= username || '' %>">
                         </div>
@@ -55,7 +55,6 @@
                     
                     <div class="text-center">
                       <button type="button" id="loginButton" class="btn bg-gradient-primary w-100 my-4 mb-2" onclick="window.location.href='/auth/login'">Login</button>
-
                     </div>
                     
                     <div class="col-lg-5 content-right">

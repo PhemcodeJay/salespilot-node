@@ -15,8 +15,6 @@ const punycode = require('punycode/');
 const cookieParser = require('cookie-parser');
 
 
-
-
 // Initialize Express App
 const app = express();
 
@@ -145,7 +143,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: 'Internal Server Error', error: err.message });
 });
 
-
+app.use('/auth', authRoutes);
 
 // Start Server
 const PORT = process.env.PORT || 5000;

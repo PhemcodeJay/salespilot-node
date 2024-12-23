@@ -1,241 +1,171 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
-const User = require('../models/user'); // Assuming you have a User model
-const { sendPasswordResetEmail, sendAccountActivationEmail } = require('../utils/email'); // Assuming email utils are set up
+const User = require('../models/user');
+const Feedback = require('../models/contact');
+const { sendAccountActivationEmail } = require('../utils/email'); // Assuming email utility is set up
+const generateActivationCode = require('../utils/activationCode'); // Assuming activation code generator is set up
 
-// Signup Controller
-exports.signup = async (req, res) => {
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
+
+// Centralized Response Helper
+const sendResponse = (res, status, msg, data = null) => {
+    const response = { msg };
+    if (data) response.data = data;
+    res.status(status).json(response);
+};
+
+// Register User
+const registerUser = async (req, res) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
+    if (!errors.isEmpty()) return sendResponse(res, 400, 'Validation failed', errors.array());
 
-    const { username, password, email } = req.body;
+    const { username, email, password } = req.body;
 
     try {
-        // Check if the user already exists
+        // Check if user already exists
         const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ msg: 'User already exists' });
-        }
+        if (existingUser) return sendResponse(res, 400, 'User already exists');
 
         // Hash the password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Get current date for trial start
-        const trialStartDate = new Date();
-        // Set trial end date to 3 months from now
-        const trialEndDate = new Date(trialStartDate);
-        trialEndDate.setMonth(trialEndDate.getMonth() + 3);
+        // Generate an activation code
+        const activationCode = generateActivationCode();
 
-        // Create the new user with trial period details
+        // Set the user with trial period
         const newUser = new User({
             username,
             email,
             password: hashedPassword,
-            isActive: false, // Set account as inactive until activation
-            trialStartDate,   // Add trial start date
-            trialEndDate,     // Add trial end date
-            subscriptionType: 'trial',  // Set initial subscription type as 'trial'
+            activationCode,
+            isActive: false,
+            trialEnds: null, // Trial starts upon activation
         });
 
-        // Save the user to the database
+        // Save the new user to the database
         await newUser.save();
 
         // Send activation email
-        sendAccountActivationEmail(newUser.email, newUser._id);
+        const emailSent = await sendAccountActivationEmail(email, activationCode);
+        if (!emailSent) return sendResponse(res, 500, 'Failed to send activation email');
 
-        res.status(201).json({ msg: 'User registered successfully. Please check your email to activate your account.' });
+        sendResponse(res, 201, 'User registered successfully. Please check your email to activate your account.');
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: 'Server error' });
+        sendResponse(res, 500, 'Server error');
     }
 };
 
-// Account Activation Controller
-exports.activateAccount = async (req, res) => {
-    const { activationCode } = req.body;
+// Activate Account
+const activateAccount = async (req, res) => {
+    const { email, activationCode } = req.body;
 
     try {
-        // Find the user by activation code (could be stored in the database or sent as a JWT)
-        const user = await User.findOne({ activationCode });
+        // Find the user by email
+        const user = await User.findOne({ email });
+        if (!user) return sendResponse(res, 404, 'User not found');
+        if (user.isActive) return sendResponse(res, 400, 'Account is already activated');
 
-        if (!user) {
-            return res.status(400).json({ msg: 'Invalid activation code' });
-        }
+        // Verify the activation code
+        if (user.activationCode !== activationCode) return sendResponse(res, 400, 'Invalid activation code');
 
-        // Activate the user account
+        // Activate the account and set the trial period to 3 months
         user.isActive = true;
+        user.activationCode = null;
+        user.trialEnds = Date.now() + 3 * 30 * 24 * 60 * 60 * 1000; // 3 months in milliseconds
         await user.save();
 
-        res.status(200).json({ msg: 'Account activated successfully' });
+        sendResponse(res, 200, 'Account activated successfully. Your 3-month trial has started.');
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: 'Server error' });
+        sendResponse(res, 500, 'Server error');
     }
 };
 
-// Login Controller
-exports.login = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-
-    const { username, password } = req.body;
+// Login User
+const loginUser = async (req, res) => {
+    const { email, password } = req.body;
 
     try {
-        // Find user by username
-        const user = await User.findOne({ username });
-        if (!user) {
-            return res.status(400).json({ msg: 'Invalid credentials' });
-        }
+        const user = await User.findOne({ email });
+        if (!user) return sendResponse(res, 404, 'User not found');
+        if (!user.isActive) return sendResponse(res, 403, 'Account is not activated. Please activate your account.');
 
-        // Check if account is active
-        if (!user.isActive) {
-            return res.status(400).json({ msg: 'Account is not activated. Please check your email' });
-        }
+        // Check if the password matches
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return sendResponse(res, 401, 'Invalid credentials');
 
-        // Check if trial has expired
-        const currentDate = new Date();
-        if (user.trialEndDate && currentDate > new Date(user.trialEndDate)) {
+        // Check if the trial period has expired
+        if (user.trialEnds && Date.now() > user.trialEnds) {
+            user.isActive = false;
             user.subscriptionType = 'expired';
             await user.save();
-            return res.status(400).json({ msg: 'Your trial period has expired. Please subscribe to continue using the service.' });
+            return sendResponse(res, 400, 'Your trial period has expired. Please subscribe to continue using the service.');
         }
 
-        // Compare password with hashed password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ msg: 'Invalid credentials' });
-        }
+        // Create a JWT token
+        const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '1h' });
 
-        // Create JWT token
-        const payload = { userId: user._id };
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-        res.json({ token });
+        sendResponse(res, 200, 'Login successful', { token });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: 'Server error' });
+        sendResponse(res, 500, 'Server error');
     }
 };
 
-// Send Feedback Controller
-exports.sendFeedback = async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+// Logout User
+const logoutUser = (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+        // Add token to invalidated tokens list (optional)
+        // invalidTokens.add(token);
     }
+    sendResponse(res, 200, 'Logged out successfully');
+};
 
+// Submit Feedback
+const submitFeedback = async (req, res) => {
     const { username, feedback } = req.body;
 
-    // Save feedback in database (assuming you have a Feedback model)
-    // await Feedback.create({ username, feedback });
-
-    res.status(200).json({ msg: 'Feedback received successfully' });
-};
-
-// Manage Subscription Controller
-exports.manageSubscription = async (req, res) => {
-    const { userId, subscriptionType } = req.body;
-
     try {
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(400).json({ msg: 'User not found' });
-        }
-
-        // Handle subscription type update (e.g., upgrade or downgrade)
-        user.subscriptionType = subscriptionType;
-        if (subscriptionType !== 'trial') {
-            user.trialEndDate = null; // Remove trial period if the user subscribes
-        }
-        await user.save();
-
-        res.status(200).json({ msg: 'Subscription updated successfully' });
+        await Feedback.create({ username, feedback });
+        sendResponse(res, 200, 'Feedback received successfully');
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: 'Server error' });
+        sendResponse(res, 500, 'Server error');
     }
 };
 
-// Logout Controller
-exports.logout = (req, res) => {
-    // Invalidate the token or remove it from the frontend
-    res.status(200).json({ msg: 'Logged out successfully' });
-};
-
-// Password Reset Request Controller
-exports.passwordResetRequest = async (req, res) => {
-    const { user_id } = req.body;
+// Reset Password
+const resetPassword = async (req, res) => {
+    const { email, resetCode, newPassword } = req.body;
 
     try {
-        // Find the user by ID
-        const user = await User.findById(user_id);
-        if (!user) {
-            return res.status(400).json({ msg: 'User not found' });
-        }
-
-        // Generate a reset token
-        const resetToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-        // Send password reset email with the reset token
-        sendPasswordResetEmail(user.email, resetToken);
-
-        res.status(200).json({ msg: 'Password reset email sent successfully' });
-    } catch (error)        {
-        console.error(error);
-        res.status(500).json({ msg: 'Server error' });
-    }
-};
-
-// Validate Password Reset Code Controller
-exports.validatePasswordReset = async (req, res) => {
-    const { reset_code } = req.body;
-
-    try {
-        // Verify the reset code
-        jwt.verify(reset_code, process.env.JWT_SECRET);
-
-        res.status(200).json({ msg: 'Reset code is valid' });
-    } catch (error) {
-        console.error(error);
-        res.status(400).json({ msg: 'Invalid or expired reset code' });
-    }
-};
-
-// Reset Password Controller
-exports.resetPassword = async (req, res) => {
-    const { user_id, reset_code, new_password } = req.body;
-
-    try {
-        // Verify the reset code
-        const decoded = jwt.verify(reset_code, process.env.JWT_SECRET);
-
-        if (decoded.userId !== user_id) {
-            return res.status(400).json({ msg: 'Invalid reset request' });
-        }
-
-        // Find the user by ID
-        const user = await User.findById(user_id);
-        if (!user) {
-            return res.status(400).json({ msg: 'User not found' });
-        }
+        // Find the user by email
+        const user = await User.findOne({ email });
+        if (!user || user.resetCode !== resetCode) return sendResponse(res, 400, 'Invalid reset code');
 
         // Hash the new password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(new_password, salt);
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-        // Update the user's password
+        // Update the password and reset the reset code
         user.password = hashedPassword;
+        user.resetCode = null;
         await user.save();
 
-        res.status(200).json({ msg: 'Password updated successfully' });
+        sendResponse(res, 200, 'Password updated successfully');
     } catch (error) {
         console.error(error);
-        res.status(500).json({ msg: 'Server error' });
+        sendResponse(res, 500, 'Server error');
     }
+};
+
+module.exports = {
+    registerUser,
+    activateAccount,
+    loginUser,
+    logoutUser,
+    submitFeedback,
+    resetPassword
 };

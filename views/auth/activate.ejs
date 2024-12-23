@@ -32,14 +32,12 @@
                     <div class="p-3">
                       <h2 class="mb-2">Activate Account</h2>
                       <p>Please enter the activation code to activate your account.</p>
-                      <form id="activation-form" autocomplete="off">
-                        <% if (activation_err) { %>
-                          <div id="error-message" class="alert alert-danger text-center"><%= activation_err %></div>
-                        <% } %>
+                      <form id="/activate" autocomplete="off">
+                        
 
                         <div class="input-group input-group-outline mb-3">
                           <input type="text" id="activation-code" class="form-control" placeholder="Enter your activation code" required>
-                          <small id="activation-code-error" class="text-danger"><%= activation_code_err || '' %></small>
+                          
                         </div>
 
                         <div class="text-center">

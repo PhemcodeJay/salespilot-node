@@ -6,12 +6,12 @@
     <title>Password Recovery</title>
 
     <!-- Favicon -->
-    <link rel="shortcut icon" href="/assets/images/favicon.ico" />
-    <link rel="stylesheet" href="/assets/css/backend-plugin.min.css">
-    <link rel="stylesheet" href="/assets/css/backend.css?v=1.0.0">
-    <link rel="stylesheet" href="/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css">
-    <link rel="stylesheet" href="/assets/vendor/line-awesome/dist/line-awesome/css/line-awesome.min.css">
-    <link rel="stylesheet" href="/assets/vendor/remixicon/fonts/remixicon.css">
+    <link rel="shortcut icon" href="http://localhost:5000/assets/images/favicon.ico" />
+    <link rel="stylesheet" href="http://localhost:5000/assets/css/backend-plugin.min.css">
+    <link rel="stylesheet" href="http://localhost:5000/assets/css/backend.css?v=1.0.0">
+    <link rel="stylesheet" href="http://localhost:5000/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css">
+    <link rel="stylesheet" href="http://localhost:5000/assets/vendor/line-awesome/dist/line-awesome/css/line-awesome.min.css">
+    <link rel="stylesheet" href="http://localhost:5000/assets/vendor/remixicon/fonts/remixicon.css">
 </head>
 <body>
     <!-- loader Start -->
@@ -30,21 +30,19 @@
                                 <div class="d-flex align-items-center auth-content">
                                     <div class="col-lg-7 align-self-center">
                                         <div class="p-3">
-                                            <h2 class="mb-2">Recover Password</h2>
-                                            <p>Enter your email address and we'll send you an email with instructions to reset your password.</p>
+                                            <h2 class="mb-2" style="font-weight: bold; text-decoration: underline;">Recover Password</h2>
+                                            <p style="font-weight: bold; text-decoration: underline;">Enter your email address and we'll send you an email with instructions to reset your password.</p>
 
-                                            <!-- Display error or success message -->
-                                            <div id="error-message" class="alert alert-danger" style="display: none;"></div>
-                                            <div id="success-message" class="alert alert-success" style="display: none;"></div>
+                                    
 
-                                            <form id="reset-password-form" method="post" action="/password-recovery">
-                                                <input type="hidden" name="csrf_token" value="<%= csrf_token %>">
+                                            <form method="post" action="/recoverpwd">
+                                                
 
                                                 <div class="row">
                                                     <div class="col-lg-12">
                                                         <div class="floating-label form-group">
-                                                            <input class="floating-input form-control" type="email" name="Email" id="email" placeholder="Enter Your Email Address" required>
-                                                            <label for="email">Email</label>
+                                                            <input class="floating-input form-control" type="email" name="email" id="email" placeholder="Enter Your Email Address" required>
+                                                            <label for="email" style="font-weight: bold;">Email</label>
                                                             <small id="email-error" class="text-danger"></small>
                                                         </div>
                                                     </div>
@@ -56,7 +54,7 @@
                                         </div>
                                     </div>
                                     <div class="col-lg-5 content-right">
-                                        <img src="/assets/images/login/01.png" class="img-fluid image-right" alt="Password Recovery Image">
+                                        <img src="http://localhost:5000/assets/images/login/01.png" class="img-fluid image-right" alt="Password Recovery Image">
                                     </div>
                                 </div>
                             </div>
@@ -68,43 +66,23 @@
     </div>
 
     <!-- Backend Bundle JavaScript -->
-    <script src="/assets/js/backend-bundle.min.js"></script>
-    <script src="/assets/js/table-treeview.js"></script>
-    <script src="/assets/js/app.js"></script>
+    <script src="http://localhost:5000/assets/js/backend-bundle.min.js"></script>
+    <script src="http://localhost:5000/assets/js/table-treeview.js"></script>
+    <script src="http://localhost:5000/assets/js/app.js"></script>
 
     <script>
         document.getElementById('reset-password-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-
             const email = document.getElementById('email').value;
-            const errorMessage = document.getElementById('error-message');
-            const successMessage = document.getElementById('success-message');
             const emailError = document.getElementById('email-error');
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-            // Reset messages
-            errorMessage.style.display = 'none';
-            successMessage.style.display = 'none';
             emailError.textContent = '';
 
             // Validate email format
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
+                event.preventDefault();
                 emailError.textContent = 'Please enter a valid email address.';
-                return;
             }
-
-            const confirmReset = confirm('Are you sure you want to request a password reset?');
-
-            if (!confirmReset) {
-                return;
-            }
-
-            // Assuming successful form submission, you can display a success message
-            successMessage.textContent = 'If your email is registered, you will receive an email with instructions to reset your password.';
-            successMessage.style.display = 'block';
-
-            // Optionally submit the form via AJAX or traditional form submission.
-            this.submit();
         });
     </script>
 </body>
