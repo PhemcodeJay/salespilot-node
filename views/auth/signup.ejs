@@ -32,24 +32,10 @@
                     <div class="p-3">
                       <h2 class="mb-2">Sign Up</h2>
                       <p>Create your SalesPilot account.</p>
-                      <form id="signup-form" autocomplete="off" method="POST" action="/auth/signup">
-                        <% if (error_message) { %>
-                          <div id="error-message" class="alert alert-danger text-center"><%= error_message %></div>
-                      <% } %>
-                    
+                      <form action="/signup" method="POST">
                         <div class="input-group input-group-outline mb-3">
                             <input type="text" id="username" name="username" class="form-control" placeholder="Enter your username" required value="<%= username || '' %>">
                             <small id="username-error" class="text-danger"><%= username_error || '' %></small>
-                        </div>
-                    
-                        <div class="input-group input-group-outline mb-3">
-                            <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
-                            <small id="password-error" class="text-danger"><%= password_error || '' %></small>
-                        </div>
-                    
-                        <div class="input-group input-group-outline mb-3">
-                            <input type="password" id="confirm-password" name="confirm_password" class="form-control" placeholder="Confirm your password" required>
-                            <small id="confirm-password-error" class="text-danger"><%= confirm_password_error || '' %></small>
                         </div>
                     
                         <div class="input-group input-group-outline mb-3">
@@ -57,23 +43,33 @@
                             <small id="email-error" class="text-danger"><%= email_error || '' %></small>
                         </div>
                     
-                        <div class="form-check form-check-info text-start ps-0">
-                            <input class="form-check-input" type="checkbox" id="terms" name="terms" required <%= terms_checked ? 'checked' : '' %> >
-                            <label class="form-check-label" for="terms">
-                                I agree to the <a href="javascript:;" class="text-dark font-weight-bolder">Terms and Conditions</a>
-                            </label>
+                        <div class="input-group input-group-outline mb-3">
+                            <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
                         </div>
                     
-                        <div class="text-center">
-                            <button type="submit" class="btn btn-lg bg-gradient-primary w-100 mt-4 mb-0">Sign Up</button>
+                        <div class="input-group input-group-outline mb-3">
+                            <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Confirm your password" required>
                         </div>
+                    
+                        <% if (error_message) { %>
+                            <div id="error-message" class="alert alert-danger text-center"><%= error_message %></div>
+                        <% } %>
+                    
+                        <% if (success) { %>
+                            <div id="success-message" class="alert alert-success text-center"><%= success %></div>
+                        <% } %>
+                    
+                        <button type="submit" class="btn btn-primary btn-block mb-3">Sign Up</button>
                     </form>
                     
-                      <div class="text-center">
+                    <div class="text-center">
                         <button type="button" id="loginButton" class="btn bg-gradient-primary w-100 my-4 mb-2" onclick="window.location.href='/login'">Login</button>
-                      </div>
                     </div>
-                  </div>
+                    
+                    
+                    <div class="col-lg-5 content-right">
+                        <img src="http://localhost:5000/assets/images/login/01.png" class="img-fluid image-right" alt=""/>
+                    </div>
                   <div class="col-lg-5 content-right">
                     <img src="http://localhost:5000/assets/images/login/01.png" class="img-fluid image-right" alt=""/>
                   </div>

@@ -32,45 +32,52 @@ router.get('/recoverpwd', (req, res) => {
 // Signup Route
 router.post('/signup', async (req, res) => {
     const errors = validationResult(req);
-    
-    // If there are validation errors, return them
+    const { username, password, confirm_password, email } = req.body;
+
+    // If there are validation errors, return them with input values
     if (!errors.isEmpty()) {
         return res.render('auth/signup', {
-            error_message: errors.array().map(err => err.msg).join(', '),
-            success: null // Clear any success message if errors occur
+            error_message: errors.array().map(err => err.msg).join(', '), // Combine errors into one message
+            username: username,  // Pass username entered by the user
+            email: email,        // Pass email entered by the user
+            password: password,  // Pass password entered by the user
+            confirm_password: confirm_password,  // Pass confirm_password entered by the user
+            success: null         // Clear any success message if errors occur
         });
     }
-
-    const { username, password, confirm_password, email } = req.body;
 
     // Ensure password and confirm password match
     if (password !== confirm_password) {
         return res.render('auth/signup', {
-            error_message: 'Passwords do not match.',
-            success: null // Clear any success message if errors occur
+            error_message: 'Passwords do not match.',  // Error message if passwords do not match
+            username: username,  // Pass username entered by the user
+            email: email,        // Pass email entered by the user
+            success: null         // Clear any success message if passwords do not match
         });
     }
 
     try {
-        // Check if the user already exists
+        // Check if the user already exists based on the email
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.render('auth/signup', {
-                error_message: 'User already exists. Please use a different email.',
-                success: null // Clear any success message if errors occur
+                error_message: 'User already exists. Please use a different email.',  // Error message for existing user
+                username: username,  // Pass username entered by the user
+                email: email,        // Pass email entered by the user
+                success: null         // Clear any success message if the user already exists
             });
         }
 
-        // Hash the password before saving it
+        // Hash the password before saving it to the database
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create a new user
+        // Create a new user object
         const newUser = new User({
             username,
             email,
             password: hashedPassword,
-            isActive: false, 
+            isActive: false,  // User is inactive until account activation
         });
 
         // Save the new user to the database
@@ -82,17 +89,22 @@ router.post('/signup', async (req, res) => {
         // Render the signup page with a success message
         res.render('auth/signup', {
             error_message: null, // Clear any error message
-            success: 'User registered successfully. Please check your email to activate your account.'
+            username: username,  // Pass username entered by the user
+            email: email,        // Pass email entered by the user
+            success: 'User registered successfully. Please check your email to activate your account.'  // Success message
         });
+
     } catch (error) {
         console.error(error);
+        // Handle server error
         res.render('auth/signup', {
-            error_message: 'Server error. Please try again later.',
-            success: null // Clear any success message in case of an error
+            error_message: 'Server error. Please try again later.',  // General error message
+            username: username,  // Pass username entered by the user
+            email: email,        // Pass email entered by the user
+            success: null         // Clear any success message in case of an error
         });
     }
 });
-
 
 
 // Account Activation Route
