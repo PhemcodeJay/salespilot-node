@@ -2,7 +2,7 @@ const Payment = require('../models/payment');
 const Subscription = require('../models/subscriptions');
 const path = require('path');
 const jwt = require('jsonwebtoken');
-const userModel = require('../models/user');
+const userModel = require('../models/authModel');
 
 exports.checkSubscriptionAndProcessPayment = async (req, res) => {
   const { user_id, payment_method, payment_proof, payment_amount, payment_status } = req.body;

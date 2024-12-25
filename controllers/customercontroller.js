@@ -4,7 +4,7 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 const customerModel = require('../models/customer');
-const userModel = require('../models/user');
+const userModel = require('../models/authModel');
 
 // MySQL connection pool setup
 const pool = mysql.createPool({

@@ -1,5 +1,6 @@
 const mysql = require('mysql2');
 const FPDF = require('pdfkit');
+const userModel = require('../models/authModel');
 
 const pool = mysql.createPool({
     host: process.env.DB_HOST,

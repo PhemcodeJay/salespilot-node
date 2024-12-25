@@ -515,7 +515,7 @@ INSERT INTO `staffs` (`staff_id`, `staff_name`, `staff_email`, `staff_phone`, `p
 CREATE TABLE `subscriptions` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `subscription_plan` enum('starter','business','enterprise') NOT NULL,
+  `subscription_plan` enum('trial','starter','business','enterprise') NOT NULL,
   `start_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `end_date` timestamp NOT NULL DEFAULT '2030-12-31 20:59:59',
   `status` enum('active','expired','canceled') DEFAULT 'active',

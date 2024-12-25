@@ -3,7 +3,7 @@ const fs = require('fs');
 const pdfkit = require('pdfkit');
 const path = require('path');
 const jwt = require('jsonwebtoken');
-const userModel = require('../models/user');
+const userModel = require('../models/authModel');
 const invoiceModel = require('../models/invoice');
 
 

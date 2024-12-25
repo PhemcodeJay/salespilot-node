@@ -4,7 +4,7 @@ const dayjs = require('day'); // Fixed 'day' to 'dayjs'
 const salesModel = require('../models/sales');
 const inventoryModel = require('../models/inventory');
 const productModel = require('../models/product');
-const userModel = require('../models/user');
+const userModel = require('../models/authModel');
 
 // Middleware to handle sessions
 const sessionMiddleware = session({

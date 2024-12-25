@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs'); // For password hashing
-const User = require('../models/user'); // Assuming the model is in the 'models' folder
+const userModel = require('../models/authModel');
 const Subscription = require('../models/subscriptions'); // Import the subscriptions model
 const dayjs = require('dayjs'); // For date manipulation
 const db = require('../config/db'); // Assuming the db connection is configured here

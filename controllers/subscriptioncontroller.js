@@ -1,5 +1,6 @@
 const mysql = require('mysql2/promise');
 const { DateTime } = require('luxon');
+const userModel = require('../models/authModel');
 
 // Create a database pool for better performance with multiple queries
 const db = mysql.createPool({
