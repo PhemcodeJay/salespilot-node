@@ -15,7 +15,7 @@ const router = express.Router();
 router.post('/auth/login', authController.login);
 
 // User registration
-router.post('/auth/register', authController.signup);
+router.post('/auth/signup', authController.signup);
 
 // User logout
 router.post('/auth/logout', checkLogin, authController.logout);
