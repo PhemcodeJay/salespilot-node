@@ -1,4 +1,4 @@
-const authModel = require('./authModel');
+const authModel = require('../models/authModel');
 const express = require('express');
 const router = express.Router();
 

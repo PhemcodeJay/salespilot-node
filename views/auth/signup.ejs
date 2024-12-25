@@ -32,31 +32,38 @@
                     <div class="p-3">
                       <h2 class="mb-2">Sign Up</h2>
                       <p>Create your SalesPilot account.</p>
-                      <form action="auth/signup" method="POST">
+                      <!-- The action URL is set to the POST route for signup -->
+                      <form action="/auth/signup" method="POST">
+                        <!-- Username field -->
                         <div class="input-group input-group-outline mb-3">
                             <input type="text" id="username" name="username" class="form-control" placeholder="Enter your username" required value="<%= username || '' %>">
                         </div>
                     
+                        <!-- Email field -->
                         <div class="input-group input-group-outline mb-3">
                             <input type="email" id="email" name="email" class="form-control" placeholder="Enter your email" required value="<%= email || '' %>">
-
                         </div>
                     
+                        <!-- Password field -->
                         <div class="input-group input-group-outline mb-3">
                             <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
                         </div>
                     
+                        <!-- Confirm Password field -->
                         <div class="input-group input-group-outline mb-3">
                             <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Confirm your password" required>
                         </div>
                     
+                        <!-- Submit button -->
                         <button type="submit" class="btn btn-primary btn-block mb-3">Sign Up</button>
                     </form>
                     
+                    <!-- Redirect to login page -->
                     <div class="text-center">
                       <button type="button" id="loginButton" class="btn bg-gradient-primary w-100 my-4 mb-2" onclick="window.location.href='/auth/login'">Login</button>
                     </div>
                     
+                    <!-- Right side image (optional) -->
                     <div class="col-lg-5 content-right">
                         <img src="http://localhost:5000/assets/images/login/01.png" class="img-fluid image-right" alt=""/>
                     </div>
