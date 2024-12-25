@@ -6,19 +6,17 @@
   <title>Register</title>
   
   <!-- Favicon -->
-  <link rel="shortcut icon" href="http://localhost:5000/assets/images/favicon.ico" />
-  <link rel="stylesheet" href="http://localhost:5000/assets/css/backend-plugin.min.css">
-  <link rel="stylesheet" href="http://localhost:5000/assets/css/backend.css?v=1.0.0">
-  <link rel="stylesheet" href="http://localhost:5000/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css">
-  <link rel="stylesheet" href="http://localhost:5000/assets/vendor/line-awesome/dist/line-awesome/css/line-awesome.min.css">
-  <link rel="stylesheet" href="http://localhost:5000/assets/vendor/remixicon/fonts/remixicon.css">  
+  <link rel="shortcut icon" href="/assets/images/favicon.ico" />
+  <link rel="stylesheet" href="/assets/css/backend-plugin.min.css">
+  <link rel="stylesheet" href="/assets/css/backend.css?v=1.0.0">
+  <link rel="stylesheet" href="/assets/vendor/@fortawesome/fontawesome-free/css/all.min.css">
+  <link rel="stylesheet" href="/assets/vendor/line-awesome/dist/line-awesome/css/line-awesome.min.css">
+  <link rel="stylesheet" href="/assets/vendor/remixicon/fonts/remixicon.css">  
 </head>
 <body>
-  <!-- loader Start -->
   <div id="loading">
     <div id="loading-center"></div>
   </div>
-  <!-- loader END -->
 
   <div class="wrapper">
     <section class="login-content">
@@ -32,41 +30,28 @@
                     <div class="p-3">
                       <h2 class="mb-2">Sign Up</h2>
                       <p>Create your SalesPilot account.</p>
-                      <!-- The action URL is set to the POST route for signup -->
                       <form action="/auth/signup" method="POST">
-                        <!-- Username field -->
                         <div class="input-group input-group-outline mb-3">
-                            <input type="text" id="username" name="username" class="form-control" placeholder="Enter your username" required value="<%= username || '' %>">
+                          <input type="text" id="username" name="username" class="form-control" placeholder="Enter your username" required>
                         </div>
-                    
-                        <!-- Email field -->
                         <div class="input-group input-group-outline mb-3">
-                            <input type="email" id="email" name="email" class="form-control" placeholder="Enter your email" required value="<%= email || '' %>">
+                          <input type="email" id="email" name="email" class="form-control" placeholder="Enter your email" required>
                         </div>
-                    
-                        <!-- Password field -->
                         <div class="input-group input-group-outline mb-3">
-                            <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
+                          <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" required>
                         </div>
-                    
-                        <!-- Confirm Password field -->
                         <div class="input-group input-group-outline mb-3">
-                            <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Confirm your password" required>
+                          <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Confirm your password" required>
                         </div>
-                    
-                        <!-- Submit button -->
                         <button type="submit" class="btn btn-primary btn-block mb-3">Sign Up</button>
-                    </form>
-                    
-                    <!-- Redirect to login page -->
-                    <div class="text-center">
-                      <button type="button" id="loginButton" class="btn bg-gradient-primary w-100 my-4 mb-2" onclick="window.location.href='/auth/login'">Login</button>
+                      </form>
+                      <div class="text-center">
+                        <button type="button" class="btn btn-primary w-100 my-4 mb-2" onclick="window.location.href='/auth/login'">Login</button>
+                      </div>
                     </div>
-                    
-                    <!-- Right side image (optional) -->
-                    <div class="col-lg-5 content-right">
-                        <img src="http://localhost:5000/assets/images/login/01.png" class="img-fluid image-right" alt=""/>
-                    </div>
+                  </div>
+                  <div class="col-lg-5 content-right">
+                    <img src="/assets/images/login/01.png" class="img-fluid image-right" alt=""/>
                   </div>
                 </div>
               </div>
@@ -77,13 +62,8 @@
     </section>
   </div>
 
-  <!-- Backend Bundle JavaScript -->
-  <script src="http://localhost:5000/assets/js/backend-bundle.min.js"></script>
-
-  <!-- Table Treeview JavaScript -->
-  <script src="http://localhost:5000/assets/js/table-treeview.js"></script>
-
-  <!-- app JavaScript -->
-  <script src="http://localhost:5000/assets/js/app.js"></script>
+  <script src="/assets/js/backend-bundle.min.js"></script>
+  <script src="/assets/js/table-treeview.js"></script>
+  <script src="/assets/js/app.js"></script>
 </body>
 </html>

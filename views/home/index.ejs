@@ -89,10 +89,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <p data-aos="fade-up" data-aos-delay="200">Inventory Management & Sales Analytics</p>
           </div>
           <div class="col-lg-5">
-            <form action="/auth/signup" class="sign-up-form d-flex" data-aos="fade-up" data-aos-delay="300" method="POST">
+            <div class="sign-up-form d-flex" data-aos="fade-up" data-aos-delay="300">
               <span class="form-control">Sign up and Activate Free Trial</span>
-              <input type="submit" class="btn btn-primary" value="Sign up">
-            </form>            
+              <button class="btn btn-danger" onclick="redirectToSignup()">Sign up</button>
+            </div>
+            
+            <script>
+              function redirectToSignup() {
+                window.location.href = '/auth/signup'; // Redirect to the signup page
+              }
+            </script>                       
           
           </div>
         </div>
