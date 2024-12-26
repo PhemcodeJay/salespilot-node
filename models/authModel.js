@@ -1,74 +1,72 @@
-const mysql = require('mysql2');
+require('dotenv').config();
+const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const moment = require('moment');
+const validator = require('validator');
 
-// MySQL connection configuration
+// MySQL connection pool
 const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: 'your-password',
-  database: 'salespilot',
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'salespilot',
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0,
 });
 
-// Helper function to send activation email
-const sendActivationEmail = async (email, activationCode) => {
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
+// Email transporter configuration
+const createTransporter = () =>
+  nodemailer.createTransport({
+    service: 'ionos',
     auth: {
-      user: 'your-email@gmail.com',
-      pass: 'your-email-password',
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
     },
   });
 
-  const activationLink = `http://your-website.com/activate?code=${activationCode}`;
+// Utility function to send activation emails
+const sendActivationEmail = async (email, activationCode) => {
+  const transporter = createTransporter();
+  const activationLink = `${process.env.APP_URL}/activate?code=${activationCode}`;
   const mailOptions = {
-    from: 'your-email@gmail.com',
+    from: process.env.EMAIL_USER,
     to: email,
     subject: 'Activate Your Account',
-    text: `Please click the following link to activate your account: ${activationLink}`,
+    text: `Click the link to activate your account: ${activationLink}`,
   };
-
   await transporter.sendMail(mailOptions);
 };
 
-// Helper function to generate random string (for activation code, reset code, etc.)
+// Generate a random code
 const generateRandomCode = () => crypto.randomBytes(20).toString('hex');
 
 // Signup function
 const signup = async (userData) => {
-  const { username, email, password, confirmpassword, phone, location, user_image } = userData;
+  const { username, email, password, confirmpassword } = userData;
 
-  // Check if passwords match
-  if (password !== confirmpassword) {
-    throw new Error('Passwords do not match');
-  }
+  // Validate inputs
+  if (password !== confirmpassword) throw new Error('Passwords do not match');
+  if (!validator.isEmail(email)) throw new Error('Invalid email format');
 
-  // Check if the user already exists
-  const [existingUser] = await pool.promise().query('SELECT * FROM users WHERE email = ?', [email]);
-  if (existingUser.length > 0) {
-    throw new Error('User already exists');
-  }
+  // Check if user already exists
+  const [existingUser] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+  if (existingUser.length > 0) throw new Error('User already exists');
 
-  // Hash the password
+  // Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Create the user in the database
-  const [result] = await pool.promise().query(
-    'INSERT INTO users (username, email, password, confirmpassword, phone, location, user_image, status, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    [username, email, hashedPassword, hashedPassword, phone, location, user_image, 1, 0]
+  // Insert user into the database
+  const [result] = await pool.query(
+    'INSERT INTO users (username, email, password, status, is_active) VALUES (?, ?, ?, ?, ?)',
+    [username, email, hashedPassword, 1, 0]
   );
-
-  // Get the inserted user's ID
   const userId = result.insertId;
 
-  // Generate and save activation code
+  // Generate and store activation code
   const activationCode = generateRandomCode();
-  await pool.promise().query(
+  await pool.query(
     'INSERT INTO activation_codes (user_id, activation_code, expires_at) VALUES (?, ?, ?)',
     [userId, activationCode, moment().add(1, 'day').toDate()]
   );
@@ -76,133 +74,92 @@ const signup = async (userData) => {
   // Send activation email
   await sendActivationEmail(email, activationCode);
 
-  // Add the free trial subscription for the user
-  await pool.promise().query(
+  // Add trial subscription
+  await pool.query(
     'INSERT INTO subscriptions (user_id, subscription_plan, start_date, end_date, status, is_free_trial_used) VALUES (?, ?, ?, ?, ?, ?)',
     [userId, 'trial', moment().toDate(), moment().add(3, 'months').toDate(), 'active', 1]
   );
 
-  return { id: userId, username, email }; // Return user details
-};
-
-// Email Activation function
-const activateUser = async (activationCode) => {
-  const [code] = await pool.promise().query('SELECT * FROM activation_codes WHERE activation_code = ?', [activationCode]);
-
-  if (code.length === 0) {
-    throw new Error('Invalid or expired activation code');
-  }
-
-  if (moment(code[0].expires_at).isBefore(moment())) {
-    throw new Error('Activation code has expired');
-  }
-
-  // Activate user
-  const userId = code[0].user_id;
-  const [user] = await pool.promise().query('SELECT * FROM users WHERE id = ?', [userId]);
-
-  if (user.length === 0 || user[0].is_active === 1) {
-    throw new Error('User already activated or not found');
-  }
-
-  // Set user as active
-  await pool.promise().query('UPDATE users SET is_active = 1 WHERE id = ?', [userId]);
-
-  // Delete the activation code
-  await pool.promise().query('DELETE FROM activation_codes WHERE id = ?', [code[0].id]);
-
-  return user[0]; // Return the activated user
+  return { id: userId, username, email };
 };
 
 // Login function
 const login = async (email, password) => {
-  const [user] = await pool.promise().query('SELECT * FROM users WHERE email = ?', [email]);
+  // Validate email
+  if (!validator.isEmail(email)) throw new Error('Invalid email format');
 
-  if (user.length === 0 || user[0].is_active === 0) {
-    throw new Error('User not found or not activated');
-  }
+  // Retrieve user from database
+  const [users] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+  if (users.length === 0) throw new Error('Invalid email or password');
 
-  const isMatch = await bcrypt.compare(password, user[0].password);
-  if (!isMatch) {
-    throw new Error('Incorrect password');
-  }
+  const user = users[0];
 
-  return user[0]; // Return user details after successful login
+  // Check if user is active
+  if (!user.is_active) throw new Error('Account is not activated');
+
+  // Compare passwords
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) throw new Error('Invalid email or password');
+
+  return { id: user.id, username: user.username, email: user.email };
 };
 
-// Logout function (destroy session if using sessions or JWT)
-const logout = (req, res) => {
-  req.session.destroy(); // or any other session management you are using
-  res.clearCookie('auth_token');
-  res.redirect('/login');
+// Activate account function
+const activateAccount = async (activationCode) => {
+  // Retrieve activation code
+  const [codes] = await pool.query(
+    'SELECT * FROM activation_codes WHERE activation_code = ? AND expires_at > NOW()',
+    [activationCode]
+  );
+  if (codes.length === 0) throw new Error('Invalid or expired activation code');
+
+  const code = codes[0];
+
+  // Activate user account
+  await pool.query('UPDATE users SET is_active = 1 WHERE id = ?', [code.user_id]);
+
+  // Delete activation code
+  await pool.query('DELETE FROM activation_codes WHERE activation_code = ?', [activationCode]);
+
+  return { message: 'Account activated successfully' };
 };
 
-// Password Reset Request function
-const requestPasswordReset = async (email) => {
-  const [user] = await pool.promise().query('SELECT * FROM users WHERE email = ?', [email]);
+// Reset password function
+const resetPassword = async (email) => {
+  // Validate email
+  if (!validator.isEmail(email)) throw new Error('Invalid email format');
 
-  if (user.length === 0) {
-    throw new Error('User not found');
-  }
+  // Retrieve user
+  const [users] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+  if (users.length === 0) throw new Error('No account found with this email');
 
-  const resetCode = generateRandomCode();
-  const expiresAt = moment().add(1, 'hour').toDate(); // expires in 1 hour
+  const user = users[0];
 
-  await pool.promise().query(
-    'INSERT INTO password_resets (user_id, reset_code, expires_at) VALUES (?, ?, ?)',
-    [user[0].id, resetCode, expiresAt]
+  // Generate and store reset token
+  const resetToken = generateRandomCode();
+  await pool.query(
+    'INSERT INTO password_resets (user_id, reset_token, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE reset_token = ?, expires_at = ?',
+    [user.id, resetToken, moment().add(1, 'hour').toDate(), resetToken, moment().add(1, 'hour').toDate()]
   );
 
-  // Send reset link to user
-  const resetLink = `http://your-website.com/reset-password?code=${resetCode}`;
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: 'your-email@gmail.com',
-      pass: 'your-email-password',
-    },
-  });
-
+  // Send reset email
+  const transporter = createTransporter();
+  const resetLink = `${process.env.APP_URL}/reset-password?token=${resetToken}`;
   const mailOptions = {
-    from: 'your-email@gmail.com',
+    from: process.env.EMAIL_USER,
     to: email,
-    subject: 'Password Reset Request',
-    text: `Please click the following link to reset your password: ${resetLink}`,
+    subject: 'Password Reset',
+    text: `Click the link to reset your password: ${resetLink}`,
   };
-
   await transporter.sendMail(mailOptions);
+
+  return { message: 'Password reset email sent' };
 };
 
-// Reset Password function
-const resetPassword = async (resetCode, newPassword) => {
-  const [reset] = await pool.promise().query('SELECT * FROM password_resets WHERE reset_code = ?', [resetCode]);
-
-  if (reset.length === 0) {
-    throw new Error('Invalid or expired reset code');
-  }
-
-  if (moment(reset[0].expires_at).isBefore(moment())) {
-    throw new Error('Reset code has expired');
-  }
-
-  const [user] = await pool.promise().query('SELECT * FROM users WHERE id = ?', [reset[0].user_id]);
-
-  // Hash the new password
-  const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-  await pool.promise().query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, user[0].id]);
-
-  // Delete the reset code
-  await pool.promise().query('DELETE FROM password_resets WHERE id = ?', [reset[0].id]);
-
-  return user[0]; // Return the updated user
-};
-
+// Export all functions
 module.exports = {
   signup,
-  activateUser,
   login,
-  logout,
-  requestPasswordReset,
+  activateAccount,
   resetPassword,
 };

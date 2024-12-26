@@ -1,6 +1,6 @@
-const express = require('express');
-const path = require('path');
-const router = express.Router();
+import { Router } from 'express';
+const router = Router();
+import { signup, login, verifyEmail, recoverpwd, passwordreset } from '../controllers/authcontroller';
 
 // Serve the signup page
 router.get('/signup', (req, res) => {
@@ -22,7 +22,7 @@ router.get('/activate', (req, res) => {
   res.render('auth/activate', { activationCode });
 });
 
-// Serve the password reset page
+// Serve the password reset request page
 router.get('/password-reset', (req, res) => {
   res.render('auth/passwordreset');  // Render the passwordreset.ejs view
 });
@@ -37,4 +37,21 @@ router.get('/recoverpwd', (req, res) => {
   res.render('auth/recoverpwd', { resetCode });
 });
 
-module.exports = router;
+
+
+// User sign up route
+router.post('/signup', signup);
+
+// User login route
+router.post('/login', login);
+
+// Email verification route
+router.get('/activate/:token', verifyEmail);
+
+// Password reset request route
+router.post('/recoverpwd', recoverpwd);
+
+// Reset password route
+router.post('/passwordreset', passwordreset);
+
+export default router;

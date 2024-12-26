@@ -564,7 +564,6 @@ CREATE TABLE `users` (
   `is_active` tinyint(1) DEFAULT 0,
   `role` enum('admin','sales','inventory') DEFAULT 'sales',
   `date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `confirmpassword` varchar(255) NOT NULL,
   `user_image` varchar(255) NOT NULL,
   `phone` varchar(20) NOT NULL,
   `location` varchar(255) NOT NULL,
