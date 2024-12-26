@@ -1,57 +1,54 @@
-import { Router } from 'express';
-const router = Router();
-import { signup, login, verifyEmail, recoverpwd, passwordreset } from '../controllers/authcontroller';
+const express = require('express');
+const { signup, login, verifyEmail, recoverPassword, resetPassword } = require('../controllers/authcontroller');
+const router = express.Router();
 
-// Serve the signup page
+// Render the signup page
 router.get('/signup', (req, res) => {
-  res.render('auth/signup');  // Render the signup.ejs view
+  res.render('auth/signup'); // Render the signup.ejs view
 });
 
-// Serve the login page
+// Render the login page
 router.get('/login', (req, res) => {
-  res.render('auth/login');  // Render the login.ejs view
+  res.render('auth/login'); // Render the login.ejs view
 });
 
-// Serve the email activation page
+// Render the email activation page
 router.get('/activate', (req, res) => {
-  const activationCode = req.query.code;  // Get the activation code from the query string
+  const activationCode = req.query.code; // Get the activation code from the query string
   if (!activationCode) {
     return res.status(400).send('Activation code is required');
   }
-  // Pass the activation code to the view for processing
-  res.render('auth/activate', { activationCode });
+  res.render('auth/activate', { activationCode }); // Pass the activation code to the view
 });
 
-// Serve the password reset request page
+// Render the password reset request page
 router.get('/password-reset', (req, res) => {
-  res.render('auth/passwordreset');  // Render the passwordreset.ejs view
+  res.render('auth/passwordreset'); // Render the passwordreset.ejs view
 });
 
-// Serve the recover password page
+// Render the recover password page
 router.get('/recoverpwd', (req, res) => {
-  const resetCode = req.query.code;  // Get the reset code from the query string
+  const resetCode = req.query.code; // Get the reset code from the query string
   if (!resetCode) {
     return res.status(400).send('Reset code is required');
   }
-  // Pass the reset code to the view for processing
-  res.render('auth/recoverpwd', { resetCode });
+  res.render('auth/recoverpwd', { resetCode }); // Pass the reset code to the view
 });
 
-
-
-// User sign up route
+// API Routes
+// Handle user sign-up
 router.post('/signup', signup);
 
-// User login route
+// Handle user login
 router.post('/login', login);
 
-// Email verification route
+// Handle email verification
 router.get('/activate/:token', verifyEmail);
 
-// Password reset request route
-router.post('/recoverpwd', recoverpwd);
+// Handle password recovery
+router.post('/recoverpwd', recoverPassword);
 
-// Reset password route
-router.post('/passwordreset', passwordreset);
+// Handle password reset
+router.post('/passwordreset', resetPassword);
 
-export default router;
+module.exports = router;

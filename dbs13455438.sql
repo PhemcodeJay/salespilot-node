@@ -28,11 +28,12 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `activation_codes` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
   `activation_code` varchar(100) NOT NULL,
   `expires_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -49,10 +50,11 @@ INSERT INTO `activation_codes` (`id`, `user_id`, `activation_code`, `expires_at`
 --
 
 CREATE TABLE `categories` (
-  `category_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL AUTO_INCREMENT,
   `category_name` varchar(100) NOT NULL,
   `description` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`category_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -74,12 +76,13 @@ INSERT INTO `categories` (`category_id`, `category_name`, `description`, `create
 --
 
 CREATE TABLE `contacts` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `message` text NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `phone` varchar(50) NOT NULL
+  `phone` varchar(50) NOT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -89,12 +92,13 @@ CREATE TABLE `contacts` (
 --
 
 CREATE TABLE `customers` (
-  `customer_id` int(11) NOT NULL,
+  `customer_id` int(11) NOT NULL AUTO_INCREMENT,
   `customer_name` varchar(100) NOT NULL,
   `customer_email` varchar(100) NOT NULL,
   `customer_phone` varchar(20) NOT NULL,
   `customer_location` text NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`customer_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -116,11 +120,12 @@ INSERT INTO `customers` (`customer_id`, `customer_name`, `customer_email`, `cust
 --
 
 CREATE TABLE `expenses` (
-  `expense_id` int(11) NOT NULL,
+  `expense_id` int(11) NOT NULL AUTO_INCREMENT,
   `description` text NOT NULL,
   `amount` decimal(10,2) NOT NULL,
   `expense_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `created_by` varchar(255) NOT NULL
+  `created_by` varchar(255) NOT NULL,
+  PRIMARY KEY (`expense_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -142,7 +147,7 @@ INSERT INTO `expenses` (`expense_id`, `description`, `amount`, `expense_date`, `
 --
 
 CREATE TABLE `inventory` (
-  `inventory_id` int(11) NOT NULL,
+  `inventory_id` int(11) NOT NULL AUTO_INCREMENT,
   `product_id` int(11) NOT NULL,
   `sales_qty` int(11) NOT NULL,
   `last_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -181,7 +186,7 @@ INSERT INTO `inventory` (`inventory_id`, `product_id`, `sales_qty`, `last_update
 --
 
 CREATE TABLE `invoices` (
-  `invoice_id` int(11) NOT NULL,
+  `invoice_id` int(11) NOT NULL AUTO_INCREMENT,
   `invoice_number` varchar(50) NOT NULL,
   `customer_name` varchar(255) NOT NULL,
   `invoice_description` text DEFAULT NULL,
@@ -193,7 +198,8 @@ CREATE TABLE `invoices` (
   `due_date` date NOT NULL,
   `subtotal` decimal(10,2) NOT NULL,
   `discount` decimal(5,2) NOT NULL,
-  `total_amount` decimal(10,2) GENERATED ALWAYS AS (`subtotal` - `subtotal` * (`discount` / 100)) STORED
+  `total_amount` decimal(10,2) GENERATED ALWAYS AS (`subtotal` - `subtotal` * (`discount` / 100)) STORED,
+  PRIMARY KEY (`invoice_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -212,12 +218,13 @@ INSERT INTO `invoices` (`invoice_id`, `invoice_number`, `customer_name`, `invoic
 --
 
 CREATE TABLE `invoice_items` (
-  `invoice_items_id` int(11) NOT NULL,
+  `invoice_items_id` int(11) NOT NULL AUTO_INCREMENT,
   `invoice_id` int(11) NOT NULL,
   `item_name` varchar(255) NOT NULL,
   `qty` int(11) NOT NULL,
   `price` decimal(10,2) NOT NULL,
-  `total` decimal(10,2) GENERATED ALWAYS AS (`qty` * `price`) STORED
+  `total` decimal(10,2) GENERATED ALWAYS AS (`qty` * `price`) STORED,
+  PRIMARY KEY (`invoice_items_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -239,11 +246,12 @@ INSERT INTO `invoice_items` (`invoice_items_id`, `invoice_id`, `item_name`, `qty
 --
 
 CREATE TABLE `page_access` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `page` varchar(255) NOT NULL,
   `required_access_level` enum('trial','starter','business','enterprise') NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
