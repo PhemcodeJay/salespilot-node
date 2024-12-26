@@ -1,5 +1,5 @@
 const express = require('express');
-const { signup, login, verifyEmail, recoverPassword, resetPassword } = require('../controllers/authcontroller');
+const { signup, login, verifyEmail, recoverpwd, passwordreset } = require('../controllers/authcontroller');
 const router = express.Router();
 
 // Render the signup page
@@ -46,9 +46,9 @@ router.post('/login', login);
 router.get('/activate/:token', verifyEmail);
 
 // Handle password recovery
-router.post('/recoverpwd', recoverPassword);
+router.post('/recoverpwd', recoverpwd);
 
 // Handle password reset
-router.post('/passwordreset', resetPassword);
+router.post('/passwordreset', passwordreset);
 
 module.exports = router;

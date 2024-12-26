@@ -306,14 +306,15 @@ CREATE TABLE `password_resets` (
 --
 
 CREATE TABLE `payments` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
   `payment_method` enum('paypal','binance','mpesa','naira') NOT NULL,
   `payment_proof` varchar(255) NOT NULL,
   `payment_amount` decimal(10,2) NOT NULL,
   `payment_status` enum('pending','completed','failed') DEFAULT 'pending',
   `payment_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `subscription_id` int(11) DEFAULT NULL
+  `subscription_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
@@ -323,7 +324,7 @@ CREATE TABLE `payments` (
 --
 
 CREATE TABLE `products` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `description` text NOT NULL,
   `price` decimal(10,2) NOT NULL,
@@ -370,11 +371,11 @@ INSERT INTO `products` (`id`, `name`, `description`, `price`, `cost`, `category_
 --
 
 CREATE TABLE `reports` (
-  `reports_id` int(11) NOT NULL,
+  `reports_id` int(11) NOT NULL AUTO_INCREMENT,
   `report_date` date NOT NULL,
   `revenue` decimal(10,2) NOT NULL,
   `profit_margin` decimal(5,2) NOT NULL,
-  `revenue_by_product` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`revenue_by_product`)),
+  `revenue_by_product` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
   `year_over_year_growth` decimal(5,2) NOT NULL,
   `cost_of_selling` decimal(10,2) NOT NULL,
   `inventory_turnover_rate` decimal(5,2) NOT NULL,
@@ -389,7 +390,8 @@ CREATE TABLE `reports` (
   `total_quantity` int(11) NOT NULL,
   `total_profit` decimal(10,2) NOT NULL,
   `total_expenses` decimal(10,2) NOT NULL,
-  `net_profit` decimal(10,2) NOT NULL
+  `net_profit` decimal(10,2) NOT NULL,
+  PRIMARY KEY (`reports_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -407,7 +409,7 @@ INSERT INTO `reports` (`reports_id`, `report_date`, `revenue`, `profit_margin`, 
 --
 
 CREATE TABLE `sales` (
-  `sales_id` int(11) NOT NULL,
+  `sales_id` int(11) NOT NULL AUTO_INCREMENT,
   `product_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `customer_id` int(11) NOT NULL,
@@ -420,7 +422,8 @@ CREATE TABLE `sales` (
   `product_type` enum('Goods','Services','Digital') NOT NULL,
   `sale_note` varchar(255) NOT NULL,
   `sales_price` decimal(10,2) NOT NULL,
-  `total_price` decimal(10,2) GENERATED ALWAYS AS (`sales_qty` * `sales_price`) VIRTUAL
+  `total_price` decimal(10,2) GENERATED ALWAYS AS (`sales_qty` * `sales_price`) VIRTUAL,
+  PRIMARY KEY (`sales_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -451,7 +454,7 @@ INSERT INTO `sales` (`sales_id`, `product_id`, `user_id`, `customer_id`, `staff_
 --
 
 CREATE TABLE `sales_analytics` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `date` date NOT NULL,
   `revenue` decimal(10,2) NOT NULL,
   `profit_margin` decimal(10,2) NOT NULL,
@@ -471,7 +474,8 @@ CREATE TABLE `sales_analytics` (
   `total_expenses` decimal(10,2) NOT NULL,
   `net_profit` decimal(10,2) NOT NULL,
   `revenue_by_category` decimal(10,2) NOT NULL,
-  `most_sold_product_id` int(11) NOT NULL
+  `most_sold_product_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -492,12 +496,13 @@ INSERT INTO `sales_analytics` (`id`, `date`, `revenue`, `profit_margin`, `year_o
 --
 
 CREATE TABLE `staffs` (
-  `staff_id` int(11) NOT NULL,
+  `staff_id` int(11) NOT NULL AUTO_INCREMENT,
   `staff_name` varchar(100) NOT NULL,
   `staff_email` varchar(100) NOT NULL,
   `staff_phone` varchar(20) NOT NULL,
   `position` enum('manager','sales') NOT NULL DEFAULT 'sales',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`staff_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -522,7 +527,7 @@ INSERT INTO `staffs` (`staff_id`, `staff_name`, `staff_email`, `staff_phone`, `p
 --
 
 CREATE TABLE `subscriptions` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
   `subscription_plan` enum('trial','starter','business','enterprise') NOT NULL,
   `start_date` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -530,7 +535,8 @@ CREATE TABLE `subscriptions` (
   `status` enum('active','expired','canceled') DEFAULT 'active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `is_free_trial_used` tinyint(1) DEFAULT 0
+  `is_free_trial_used` tinyint(1) DEFAULT 0,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
@@ -540,7 +546,7 @@ CREATE TABLE `subscriptions` (
 --
 
 CREATE TABLE `suppliers` (
-  `supplier_id` int(11) NOT NULL,
+  `supplier_id` int(11) NOT NULL AUTO_INCREMENT,
   `supplier_name` varchar(255) NOT NULL,
   `supplier_email` varchar(255) NOT NULL,
   `supplier_phone` varchar(20) NOT NULL,
@@ -548,7 +554,8 @@ CREATE TABLE `suppliers` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `product_name` varchar(255) NOT NULL,
   `supply_qty` int(11) NOT NULL,
-  `note` text NOT NULL
+  `note` text NOT NULL,
+  PRIMARY KEY (`supplier_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -566,7 +573,7 @@ INSERT INTO `suppliers` (`supplier_id`, `supplier_name`, `supplier_email`, `supp
 --
 
 CREATE TABLE `users` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(50) NOT NULL,
   `email` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
@@ -577,7 +584,8 @@ CREATE TABLE `users` (
   `phone` varchar(20) NOT NULL,
   `location` varchar(255) NOT NULL,
   `google_id` varchar(255) DEFAULT NULL,
-  `status` int(1) NOT NULL
+  `status` int(1) NOT NULL,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -854,8 +862,8 @@ ALTER TABLE `payments`
 --
 ALTER TABLE `subscriptions`
   ADD CONSTRAINT `subscriptions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
-COMMIT;
-
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+COMMIT;
