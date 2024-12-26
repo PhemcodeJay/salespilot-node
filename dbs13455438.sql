@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 02, 2024 at 07:25 PM
+-- Generation Time: Dec 27, 2024 at 12:38 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -28,12 +28,11 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `activation_codes` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `activation_code` varchar(100) NOT NULL,
   `expires_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -50,11 +49,10 @@ INSERT INTO `activation_codes` (`id`, `user_id`, `activation_code`, `expires_at`
 --
 
 CREATE TABLE `categories` (
-  `category_id` int(11) NOT NULL AUTO_INCREMENT,
+  `category_id` int(11) NOT NULL,
   `category_name` varchar(100) NOT NULL,
   `description` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`category_id`)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -76,13 +74,12 @@ INSERT INTO `categories` (`category_id`, `category_name`, `description`, `create
 --
 
 CREATE TABLE `contacts` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `message` text NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `phone` varchar(50) NOT NULL,
-  PRIMARY KEY (`id`)
+  `phone` varchar(50) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -92,13 +89,12 @@ CREATE TABLE `contacts` (
 --
 
 CREATE TABLE `customers` (
-  `customer_id` int(11) NOT NULL AUTO_INCREMENT,
+  `customer_id` int(11) NOT NULL,
   `customer_name` varchar(100) NOT NULL,
   `customer_email` varchar(100) NOT NULL,
   `customer_phone` varchar(20) NOT NULL,
   `customer_location` text NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`customer_id`)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -120,12 +116,11 @@ INSERT INTO `customers` (`customer_id`, `customer_name`, `customer_email`, `cust
 --
 
 CREATE TABLE `expenses` (
-  `expense_id` int(11) NOT NULL AUTO_INCREMENT,
+  `expense_id` int(11) NOT NULL,
   `description` text NOT NULL,
   `amount` decimal(10,2) NOT NULL,
   `expense_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `created_by` varchar(255) NOT NULL,
-  PRIMARY KEY (`expense_id`)
+  `created_by` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -147,7 +142,7 @@ INSERT INTO `expenses` (`expense_id`, `description`, `amount`, `expense_date`, `
 --
 
 CREATE TABLE `inventory` (
-  `inventory_id` int(11) NOT NULL AUTO_INCREMENT,
+  `inventory_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
   `sales_qty` int(11) NOT NULL,
   `last_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -186,7 +181,7 @@ INSERT INTO `inventory` (`inventory_id`, `product_id`, `sales_qty`, `last_update
 --
 
 CREATE TABLE `invoices` (
-  `invoice_id` int(11) NOT NULL AUTO_INCREMENT,
+  `invoice_id` int(11) NOT NULL,
   `invoice_number` varchar(50) NOT NULL,
   `customer_name` varchar(255) NOT NULL,
   `invoice_description` text DEFAULT NULL,
@@ -198,8 +193,7 @@ CREATE TABLE `invoices` (
   `due_date` date NOT NULL,
   `subtotal` decimal(10,2) NOT NULL,
   `discount` decimal(5,2) NOT NULL,
-  `total_amount` decimal(10,2) GENERATED ALWAYS AS (`subtotal` - `subtotal` * (`discount` / 100)) STORED,
-  PRIMARY KEY (`invoice_id`)
+  `total_amount` decimal(10,2) GENERATED ALWAYS AS (`subtotal` - `subtotal` * (`discount` / 100)) STORED
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -218,13 +212,12 @@ INSERT INTO `invoices` (`invoice_id`, `invoice_number`, `customer_name`, `invoic
 --
 
 CREATE TABLE `invoice_items` (
-  `invoice_items_id` int(11) NOT NULL AUTO_INCREMENT,
+  `invoice_items_id` int(11) NOT NULL,
   `invoice_id` int(11) NOT NULL,
   `item_name` varchar(255) NOT NULL,
   `qty` int(11) NOT NULL,
   `price` decimal(10,2) NOT NULL,
-  `total` decimal(10,2) GENERATED ALWAYS AS (`qty` * `price`) STORED,
-  PRIMARY KEY (`invoice_items_id`)
+  `total` decimal(10,2) GENERATED ALWAYS AS (`qty` * `price`) STORED
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -246,12 +239,11 @@ INSERT INTO `invoice_items` (`invoice_items_id`, `invoice_id`, `item_name`, `qty
 --
 
 CREATE TABLE `page_access` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `page` varchar(255) NOT NULL,
   `required_access_level` enum('trial','starter','business','enterprise') NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 --
@@ -291,12 +283,11 @@ INSERT INTO `page_access` (`id`, `page`, `required_access_level`, `created_at`, 
 --
 
 CREATE TABLE `password_resets` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `reset_code` varchar(100) NOT NULL,
   `expires_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -306,15 +297,14 @@ CREATE TABLE `password_resets` (
 --
 
 CREATE TABLE `payments` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `payment_method` enum('paypal','binance','mpesa','naira') NOT NULL,
   `payment_proof` varchar(255) NOT NULL,
   `payment_amount` decimal(10,2) NOT NULL,
   `payment_status` enum('pending','completed','failed') DEFAULT 'pending',
   `payment_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `subscription_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  `subscription_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
@@ -324,7 +314,7 @@ CREATE TABLE `payments` (
 --
 
 CREATE TABLE `products` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `description` text NOT NULL,
   `price` decimal(10,2) NOT NULL,
@@ -371,11 +361,11 @@ INSERT INTO `products` (`id`, `name`, `description`, `price`, `cost`, `category_
 --
 
 CREATE TABLE `reports` (
-  `reports_id` int(11) NOT NULL AUTO_INCREMENT,
+  `reports_id` int(11) NOT NULL,
   `report_date` date NOT NULL,
   `revenue` decimal(10,2) NOT NULL,
   `profit_margin` decimal(5,2) NOT NULL,
-  `revenue_by_product` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+  `revenue_by_product` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`revenue_by_product`)),
   `year_over_year_growth` decimal(5,2) NOT NULL,
   `cost_of_selling` decimal(10,2) NOT NULL,
   `inventory_turnover_rate` decimal(5,2) NOT NULL,
@@ -390,8 +380,7 @@ CREATE TABLE `reports` (
   `total_quantity` int(11) NOT NULL,
   `total_profit` decimal(10,2) NOT NULL,
   `total_expenses` decimal(10,2) NOT NULL,
-  `net_profit` decimal(10,2) NOT NULL,
-  PRIMARY KEY (`reports_id`)
+  `net_profit` decimal(10,2) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -405,11 +394,30 @@ INSERT INTO `reports` (`reports_id`, `report_date`, `revenue`, `profit_margin`, 
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `revenue_by_product`
+--
+
+CREATE TABLE `revenue_by_product` (
+  `id` int(11) NOT NULL,
+  `report_id` int(11) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  `product_name` varchar(255) NOT NULL,
+  `total_quantity` int(11) NOT NULL,
+  `total_sales` decimal(15,2) NOT NULL,
+  `total_cost` decimal(15,2) NOT NULL,
+  `total_profit` decimal(15,2) NOT NULL,
+  `inventory_turnover_rate` decimal(10,4) NOT NULL,
+  `sell_through_rate` decimal(10,4) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `sales`
 --
 
 CREATE TABLE `sales` (
-  `sales_id` int(11) NOT NULL AUTO_INCREMENT,
+  `sales_id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `customer_id` int(11) NOT NULL,
@@ -422,8 +430,7 @@ CREATE TABLE `sales` (
   `product_type` enum('Goods','Services','Digital') NOT NULL,
   `sale_note` varchar(255) NOT NULL,
   `sales_price` decimal(10,2) NOT NULL,
-  `total_price` decimal(10,2) GENERATED ALWAYS AS (`sales_qty` * `sales_price`) VIRTUAL,
-  PRIMARY KEY (`sales_id`)
+  `total_price` decimal(10,2) GENERATED ALWAYS AS (`sales_qty` * `sales_price`) VIRTUAL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -454,7 +461,7 @@ INSERT INTO `sales` (`sales_id`, `product_id`, `user_id`, `customer_id`, `staff_
 --
 
 CREATE TABLE `sales_analytics` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `date` date NOT NULL,
   `revenue` decimal(10,2) NOT NULL,
   `profit_margin` decimal(10,2) NOT NULL,
@@ -474,8 +481,7 @@ CREATE TABLE `sales_analytics` (
   `total_expenses` decimal(10,2) NOT NULL,
   `net_profit` decimal(10,2) NOT NULL,
   `revenue_by_category` decimal(10,2) NOT NULL,
-  `most_sold_product_id` int(11) NOT NULL,
-  PRIMARY KEY (`id`)
+  `most_sold_product_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -496,13 +502,12 @@ INSERT INTO `sales_analytics` (`id`, `date`, `revenue`, `profit_margin`, `year_o
 --
 
 CREATE TABLE `staffs` (
-  `staff_id` int(11) NOT NULL AUTO_INCREMENT,
+  `staff_id` int(11) NOT NULL,
   `staff_name` varchar(100) NOT NULL,
   `staff_email` varchar(100) NOT NULL,
   `staff_phone` varchar(20) NOT NULL,
   `position` enum('manager','sales') NOT NULL DEFAULT 'sales',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`staff_id`)
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -527,16 +532,15 @@ INSERT INTO `staffs` (`staff_id`, `staff_name`, `staff_email`, `staff_phone`, `p
 --
 
 CREATE TABLE `subscriptions` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `subscription_plan` enum('trial','starter','business','enterprise') NOT NULL,
   `start_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `end_date` timestamp NOT NULL DEFAULT '2030-12-31 20:59:59',
+  `expiration_date` timestamp NOT NULL DEFAULT '2030-12-31 20:59:59',
   `status` enum('active','expired','canceled') DEFAULT 'active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `is_free_trial_used` tinyint(1) DEFAULT 0,
-  PRIMARY KEY (`id`)
+  `is_free_trial_used` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------
@@ -546,7 +550,7 @@ CREATE TABLE `subscriptions` (
 --
 
 CREATE TABLE `suppliers` (
-  `supplier_id` int(11) NOT NULL AUTO_INCREMENT,
+  `supplier_id` int(11) NOT NULL,
   `supplier_name` varchar(255) NOT NULL,
   `supplier_email` varchar(255) NOT NULL,
   `supplier_phone` varchar(20) NOT NULL,
@@ -554,8 +558,7 @@ CREATE TABLE `suppliers` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `product_name` varchar(255) NOT NULL,
   `supply_qty` int(11) NOT NULL,
-  `note` text NOT NULL,
-  PRIMARY KEY (`supplier_id`)
+  `note` text NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -573,27 +576,28 @@ INSERT INTO `suppliers` (`supplier_id`, `supplier_name`, `supplier_email`, `supp
 --
 
 CREATE TABLE `users` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) NOT NULL,
   `username` varchar(50) NOT NULL,
   `email` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
   `is_active` tinyint(1) DEFAULT 0,
   `role` enum('admin','sales','inventory') DEFAULT 'sales',
   `date` timestamp NOT NULL DEFAULT current_timestamp(),
+  `confirmpassword` varchar(255) NOT NULL,
   `user_image` varchar(255) NOT NULL,
   `phone` varchar(20) NOT NULL,
   `location` varchar(255) NOT NULL,
   `google_id` varchar(255) DEFAULT NULL,
   `status` int(1) NOT NULL,
-  PRIMARY KEY (`id`)
+  `plan` enum('trial','starter','business','enterprise') NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `email`, `password`, `is_active`, `role`, `date`, `confirmpassword`, `user_image`, `phone`, `location`, `google_id`, `status`) VALUES
-(2, 'Megastores', 'olphemie@hotmail.com', '$2y$10$X8uPrpPbouNMJNqhZvfKMOk.cxbTO0Cmqm2UIj9Y2r/f3wEyXA2sm', 0, 'sales', '2024-11-03 03:08:56', 'mega1234', 'uploads/user/1730604250_1730520358_1726523112_20230712_130458.jpg', '', 'Texas', NULL, 0);
+INSERT INTO `users` (`id`, `username`, `email`, `password`, `is_active`, `role`, `date`, `confirmpassword`, `user_image`, `phone`, `location`, `google_id`, `status`, `plan`) VALUES
+(2, 'Megastores', 'olphemie@hotmail.com', '$2y$10$X8uPrpPbouNMJNqhZvfKMOk.cxbTO0Cmqm2UIj9Y2r/f3wEyXA2sm', 0, 'admin', '2024-11-03 03:08:56', 'mega1234', 'uploads/user/1730604250_1730520358_1726523112_20230712_130458.jpg', '', 'Texas', NULL, 1, 'trial');
 
 --
 -- Indexes for dumped tables
@@ -685,6 +689,13 @@ ALTER TABLE `products`
 --
 ALTER TABLE `reports`
   ADD PRIMARY KEY (`reports_id`);
+
+--
+-- Indexes for table `revenue_by_product`
+--
+ALTER TABLE `revenue_by_product`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `report_id` (`report_id`);
 
 --
 -- Indexes for table `sales`
@@ -796,7 +807,7 @@ ALTER TABLE `password_resets`
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `products`
@@ -809,6 +820,12 @@ ALTER TABLE `products`
 --
 ALTER TABLE `reports`
   MODIFY `reports_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `revenue_by_product`
+--
+ALTER TABLE `revenue_by_product`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `sales`
@@ -858,12 +875,18 @@ ALTER TABLE `payments`
   ADD CONSTRAINT `payments_ibfk_2` FOREIGN KEY (`subscription_id`) REFERENCES `subscriptions` (`id`);
 
 --
+-- Constraints for table `revenue_by_product`
+--
+ALTER TABLE `revenue_by_product`
+  ADD CONSTRAINT `revenue_by_product_ibfk_1` FOREIGN KEY (`report_id`) REFERENCES `reports` (`reports_id`);
+
+--
 -- Constraints for table `subscriptions`
 --
 ALTER TABLE `subscriptions`
   ADD CONSTRAINT `subscriptions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+COMMIT;
+
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-
-COMMIT;
