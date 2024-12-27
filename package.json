@@ -42,7 +42,7 @@
     "mysql2": "^3.11.5",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.16",
-    "openai": "^4.76.3",
+    "openai": "^4.77.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
