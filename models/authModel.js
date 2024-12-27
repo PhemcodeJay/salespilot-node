@@ -16,20 +16,25 @@ const pool = mysql.createPool({
   connectionLimit: 10,
 });
 
+// Test database connection
 (async () => {
   try {
     const connection = await pool.getConnection();
-    console.log('MySQL connection pool created successfully');
+    console.log('Database connected successfully');
     connection.release();
   } catch (error) {
-    console.error('Error creating MySQL connection pool:', error);
+    console.error('Database connection error:', error);
     process.exit(1);
   }
 })();
 
-// Email transporter setup
-const createTransporter = () =>
-  nodemailer.createTransport({
+// Utility functions
+const generateRandomCode = () => crypto.randomBytes(20).toString('hex');
+
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
+const sendEmail = async (to, subject, text) => {
+  const transporter = nodemailer.createTransport({
     service: 'ionos',
     auth: {
       user: process.env.EMAIL_USER,
@@ -37,15 +42,16 @@ const createTransporter = () =>
     },
   });
 
-// Utility functions
-const generateRandomCode = () => crypto.randomBytes(20).toString('hex');
-
-const sendEmail = async (to, subject, text) => {
-  const transporter = createTransporter();
   try {
-    await transporter.sendMail({ from: process.env.EMAIL_USER, to, subject, text });
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to,
+      subject,
+      text,
+    });
+    console.log('Email sent successfully');
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('Email sending error:', error);
     throw new Error('Failed to send email');
   }
 };
@@ -119,9 +125,11 @@ const resetPassword = async (email) => {
 
   const user = users[0];
   const resetToken = generateRandomCode();
+  const hashedToken = hashToken(resetToken);
+
   await pool.query(
     'INSERT INTO password_resets (user_id, reset_token, expires_at) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE reset_token = ?, expires_at = ?',
-    [user.id, resetToken, moment().add(1, 'hour').toDate(), resetToken, moment().add(1, 'hour').toDate()]
+    [user.id, hashedToken, moment().add(1, 'hour').toDate(), hashedToken, moment().add(1, 'hour').toDate()]
   );
 
   const resetLink = `${process.env.APP_URL}/reset-password?token=${resetToken}`;
@@ -130,7 +138,7 @@ const resetPassword = async (email) => {
   return { message: 'Password reset email sent' };
 };
 
-// Exports
+// Export functions
 module.exports = {
   signup,
   login,

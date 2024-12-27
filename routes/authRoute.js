@@ -50,12 +50,12 @@ router.post('/signup', signup);
 router.post('/login', login);
 
 // Handle email verification
-router.get('/activate/:token', verifyEmail);
+router.get('/activate/:token', verifyEmail); // Using token for verification
 
-// Handle password recovery
+// Handle password recovery request (send email with reset link)
 router.post('/recoverpwd', recoverpwd);
 
-// Handle password reset
+// Handle password reset (after clicking the reset link)
 router.post('/passwordreset', passwordreset);
 
 module.exports = router;
