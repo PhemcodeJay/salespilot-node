@@ -1,7 +1,14 @@
 const express = require('express');
-const { signup, login, verifyEmail, recoverpwd, passwordreset } = require('../controllers/authcontroller');
+const {
+  signup,
+  login,
+  verifyEmail,
+  recoverpwd,
+  passwordreset,
+} = require('../controllers/authcontroller');
 const router = express.Router();
 
+// View Routes
 // Render the signup page
 router.get('/signup', (req, res) => {
   res.render('auth/signup'); // Render the signup.ejs view

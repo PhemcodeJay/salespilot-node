@@ -5,10 +5,15 @@ const nodemailer = require('nodemailer');
 
 // Sign up a new user
 exports.signup = async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, confirm_password } = req.body;
+
+  // Check if passwords match
+  if (password !== confirm_password) {
+    return res.status(400).send('Passwords do not match');
+  }
 
   try {
-    // Check if user already exists
+    // Check if the user already exists
     const user = await User.findUserByEmail(email);
     if (user) {
       return res.status(400).send('Email already in use');
@@ -20,7 +25,7 @@ exports.signup = async (req, res) => {
     // Create a new user in the database
     const result = await User.createUser({ username, email, password: hashedPassword });
 
-    // Generate JWT token for email verification
+    // Generate a JWT token for email verification
     const token = jwt.sign({ userId: result.insertId }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
     // Set up email transporter
@@ -36,16 +41,19 @@ exports.signup = async (req, res) => {
       from: process.env.EMAIL_USER,
       to: email,
       subject: 'Account Activation',
-      text: `Click on the link to activate your account: ${process.env.BASE_URL}/activate/${token}`,
+      text: `Click the link to activate your account: ${process.env.BASE_URL}/activate/${token}`,
     };
 
     // Send activation email
     await transporter.sendMail(mailOptions);
+
     res.status(201).send('Signup successful. Please check your email for account activation.');
   } catch (err) {
+    console.error('Signup error:', err.message);
     res.status(500).send('Error: ' + err.message);
   }
 };
+
 
 // Log in a user
 exports.login = async (req, res) => {
