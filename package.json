@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",  // Start the app with Node.js
-    "dev": "nodemon app.js",  // Start the app with Nodemon (for development)
-    "test": "echo \"Error: no test specified\" && exit 1"  // Placeholder for tests
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
