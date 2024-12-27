@@ -47,21 +47,6 @@ app.use(passport.session());
 app.use(cookieParser());
 
 
-// Database Connection
-const db = mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'dbs13455438',
-});
-
-db.connect((err) => {
-    if (err) {
-        console.error('Database connection error:', err);
-        process.exit(1); // Exit the application if DB connection fails
-    }
-    console.log('Connected to the MySQL database.');
-});
 
 // Serve Static Files
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));

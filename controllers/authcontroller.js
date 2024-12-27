@@ -1,4 +1,5 @@
 const User = require('../models/authModel'); // Ensure this matches your authModel export
+const profile = require('../models/profile');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');

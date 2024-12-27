@@ -1,4 +1,4 @@
-const User = require('../models/user');  // Adjust the path as needed
+const User = require('../models/profile');  // Adjust the path as needed
 const moment = require('moment'); // Importing moment.js to handle date manipulation
 
 class authcontroller {
