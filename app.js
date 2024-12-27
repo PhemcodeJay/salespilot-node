@@ -1,18 +1,28 @@
 const express = require('express');
 const path = require('path');
-const mysql = require('mysql2');
+const mysql = require('mysql2/promise');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const passport = require('passport');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('./utils/bcryptUtils.js');
 const { generateToken, verifyToken } = require('./config/auth');
-const openai = require('openai');
+const openai = require('./config/openaiconfig');
 const paypalClient = require('./config/paypalconfig');
 require('dotenv').config();
 require('./config/passport')(passport);
 const flash = require('connect-flash');
-const punycode = require('punycode/');
 const cookieParser = require('cookie-parser');
+
+// Import the Punycode module
+const punycode = require('punycode/');
+
+// Encode a string (localhost example) to Punycode
+const encoded = punycode.toASCII('localhost');
+console.log('Encoded:', encoded); // Should print 'localhost' as it doesn't require encoding
+
+// Decode a Punycode string back to Unicode
+const decoded = punycode.toUnicode('localhost');
+console.log('Decoded:', decoded); // Should print 'localhost' as it doesn't require decoding
 
 
 // Initialize Express App
